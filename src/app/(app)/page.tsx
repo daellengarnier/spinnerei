@@ -6,7 +6,7 @@ import { api } from "@/lib/apiClient";
 import { EmptyState, Modal, Spinner } from "@/components/Ui";
 import { Icon } from "@/components/Icon";
 import { useAuth } from "@/components/AuthContext";
-import { icsHerunterladen, pdfHerunterladen, type UebersichtAnlass } from "@/lib/uebersichtExport";
+import { icsHerunterladen, type UebersichtAnlass } from "@/lib/uebersichtExport";
 import { istFolgetag } from "@/lib/uiUtil";
 
 interface AnlassSummary {
@@ -47,7 +47,6 @@ export default function AnlaesseUebersicht() {
   const [error, setError] = useState("");
   const [hi, setHi] = useState("Hallo");
   const [createOpen, setCreateOpen] = useState(false);
-  const [exportBusy, setExportBusy] = useState<"" | "pdf">("");
   const [archivOffen, setArchivOffen] = useState(false);
   const [details, setDetails] = useState<Map<number, UebersichtAnlass>>(new Map());
 
@@ -65,18 +64,6 @@ export default function AnlaesseUebersicht() {
       .then((d) => setDetails(new Map(d.anlaesse.map((a) => [a.id, a]))))
       .catch(() => undefined);
   }, []);
-
-  const pdfExport = async () => {
-    setExportBusy("pdf");
-    try {
-      const d = await api.get<{ anlaesse: UebersichtAnlass[] }>("/anlaesse/uebersicht");
-      await pdfHerunterladen(d.anlaesse);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setExportBusy("");
-    }
-  };
 
   const kommende = (anlaesse ?? []).filter((a) => !istVorbei(a.datum));
   const vergangene = (anlaesse ?? []).filter((a) => istVorbei(a.datum)).reverse();
@@ -100,16 +87,7 @@ export default function AnlaesseUebersicht() {
       </div>
 
       <section>
-        <div className="mb-2 flex items-baseline justify-between gap-3 px-1">
-          <h2 className="block-title">Kommende Anlässe</h2>
-          <button
-            className="inline-flex shrink-0 items-center gap-1 text-xs text-dim underline underline-offset-2 transition hover:text-accent disabled:opacity-50"
-            onClick={pdfExport}
-            disabled={exportBusy !== ""}
-          >
-            <Icon name="download" size={12} /> {exportBusy === "pdf" ? "Erstelle PDF …" : "Übersicht herunterladen"}
-          </button>
-        </div>
+        <h2 className="block-title mb-2 px-1">Kommende Anlässe</h2>
         {error && <p className="err-box">{error}</p>}
         {!anlaesse ? (
           <Spinner label="Lade Anlässe …" />
