@@ -1,0 +1,1 @@
+ALTER TABLE "anlaesse" ADD COLUMN "art" text DEFAULT '' NOT NULL;

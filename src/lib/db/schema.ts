@@ -37,6 +37,8 @@ export const anlaesse = pgTable("anlaesse", {
   ende: text("ende").notNull().default(""),
   // Petzi-Ticketlink des Anlasses (Anlassübersicht).
   petzilink: text("petzilink").notNull().default(""),
+  // Art des Anlasses (Konzert, Party, … — Freitext mit Vorschlägen).
+  art: text("art").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

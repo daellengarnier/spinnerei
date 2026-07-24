@@ -54,7 +54,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return s === "" || /^\d{2}:\d{2}$/.test(s) ? s : null;
   };
 
-  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; petzilink: string }> = {};
+  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; petzilink: string; art: string }> = {};
   if (body?.name !== undefined) {
     const name = String(body.name).trim();
     if (!name) return Response.json({ error: "Name darf nicht leer sein" }, { status: 400 });
@@ -72,6 +72,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       patch[feld] = wert;
     }
   }
+  if (body?.art !== undefined) patch.art = String(body.art).trim();
   if (body?.petzilink !== undefined) {
     const link = String(body.petzilink).trim();
     if (link && !/^https?:\/\//.test(link)) return Response.json({ error: "Petzilink muss mit http(s):// beginnen" }, { status: 400 });

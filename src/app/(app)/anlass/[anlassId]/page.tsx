@@ -21,6 +21,7 @@ interface Anlass {
   essen: string;
   ende: string;
   petzilink: string;
+  art: string;
 }
 
 interface AnlassAct {
@@ -133,6 +134,7 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
     essen: anlass.essen,
     ende: anlass.ende,
     petzilink: anlass.petzilink,
+    art: anlass.art,
   });
   const [error, setError] = useState("");
 
@@ -148,6 +150,7 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
   };
 
   const fehlend = [
+    ...(werte.art ? [] : ["Art des Anlasses"]),
     ...ZEIT_FELDER.filter((f) => !werte[f.key]).map((f) => f.label),
     ...(werte.petzilink ? [] : ["Petzilink"]),
   ];
@@ -162,6 +165,25 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
           Noch offen: {fehlend.join(", ")} — bitte ausfüllen, sobald bekannt.
         </p>
       )}
+
+      <div className="mb-2">
+        <label className="label text-xs">Art des Anlasses</label>
+        <input
+          list="anlass-arten"
+          className="input px-2 py-1.5 text-sm"
+          placeholder="z. B. Konzert, Party, …"
+          defaultValue={werte.art}
+          onBlur={(e) => e.target.value.trim() !== werte.art && save("art", e.target.value.trim())}
+        />
+        <datalist id="anlass-arten">
+          <option value="Konzert" />
+          <option value="Party" />
+          <option value="Kinderdisco" />
+          <option value="Daydance" />
+          <option value="Fest" />
+          <option value="Vermietung" />
+        </datalist>
+      </div>
 
       <div className="grid grid-cols-3 gap-2">
         {ZEIT_FELDER.map((f) => (
