@@ -1,0 +1,1 @@
+ALTER TABLE "ressorts" ALTER COLUMN "anlassId" DROP NOT NULL;

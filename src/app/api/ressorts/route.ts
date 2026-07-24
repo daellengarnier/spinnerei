@@ -1,4 +1,4 @@
-import { sql, eq, and, ne, count, max } from "drizzle-orm";
+import { sql, eq, and, ne, count, max, isNull } from "drizzle-orm";
 import { requireUser, requireAdmin, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
 import { ressorts, ressortLeads, users, todos } from "@/lib/db/schema";
@@ -13,16 +13,19 @@ async function leadsFor(ressortId: number) {
 }
 
 // Dashboard: alle Ressorts eines Anlasses mit Kennzahlen.
+// Mit ?hq=1 stattdessen die Vereinsressorts (HQ, ohne Anlass-Bezug).
 export async function GET(request: Request) {
   const auth = await requireUser();
   if (isResponse(auth)) return auth;
-  const anlassId = Number(new URL(request.url).searchParams.get("anlass"));
-  if (!anlassId) return Response.json({ error: "anlass erforderlich" }, { status: 400 });
+  const searchParams = new URL(request.url).searchParams;
+  const hq = searchParams.get("hq") === "1";
+  const anlassId = Number(searchParams.get("anlass"));
+  if (!hq && !anlassId) return Response.json({ error: "anlass erforderlich" }, { status: 400 });
   const db = getDb();
   const list = await db
     .select()
     .from(ressorts)
-    .where(eq(ressorts.anlassId, anlassId))
+    .where(hq ? isNull(ressorts.anlassId) : eq(ressorts.anlassId, anlassId))
     .orderBy(ressorts.reihenfolge, ressorts.id);
 
   const result = await Promise.all(

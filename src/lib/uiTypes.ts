@@ -40,7 +40,8 @@ export interface RessortSummary {
 
 export interface Ressort {
   id: number;
-  anlassId: number;
+  // null = Vereinsressort im HQ
+  anlassId: number | null;
   name: string;
   beschreibung: string;
   farbe: string;

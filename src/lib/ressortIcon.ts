@@ -11,6 +11,10 @@ const MAP: { match: RegExp; icon: IconName }[] = [
   { match: /deko|dekor/i, icon: "palette" },
   { match: /sicher|awareness|sani/i, icon: "shield" },
   { match: /finanz|budget|geld|kasse/i, icon: "coins" },
+  { match: /sitzung|meeting/i, icon: "chat" },
+  { match: /retraite|klausur/i, icon: "leaf" },
+  { match: /revision/i, icon: "file" },
+  { match: /booking/i, icon: "calendar" },
 ];
 
 export function ressortIcon(name: string): IconName {

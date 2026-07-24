@@ -77,7 +77,7 @@ export default function RessortPage() {
     <div className="space-y-4">
       {/* Kopf ohne Box – Titel prominent mit farbigem Punkt. */}
       <div className="px-1 pt-1">
-        <Link href={`/anlass/${ressort.anlassId}`} className="text-sm text-mute">
+        <Link href={ressort.anlassId != null ? `/anlass/${ressort.anlassId}` : "/hq"} className="text-sm text-mute">
           ← Übersicht
         </Link>
         <h1 className="mt-1 flex items-center gap-2.5 page-title">
@@ -161,9 +161,9 @@ export default function RessortPage() {
 
       {activeTab === "acts" ? (
         <Acts ressortId={ressortId} />
-      ) : activeTab === "finanzen" ? (
+      ) : activeTab === "finanzen" && ressort.anlassId != null ? (
         <Finanzen ressortId={ressortId} anlassId={ressort.anlassId} />
-      ) : activeTab === "abrechnung" ? (
+      ) : activeTab === "abrechnung" && ressort.anlassId != null ? (
         <Abrechnung anlassId={ressort.anlassId} />
       ) : activeTab === "zeitplan" ? (
         <Zeitplan ressortId={ressortId} board="programm" mode="acts" />

@@ -80,9 +80,8 @@ export const sessions = pgTable("sessions", {
 
 export const ressorts = pgTable("ressorts", {
   id: serial("id").primaryKey(),
-  anlassId: integer("anlassId")
-    .notNull()
-    .references(() => anlaesse.id, { onDelete: "cascade" }),
+  // null = Vereinsressort im HQ (Sitzungen, Retraite, …), ohne Anlass-Bezug.
+  anlassId: integer("anlassId").references(() => anlaesse.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   beschreibung: text("beschreibung").notNull().default(""),
   farbe: text("farbe").notNull().default("#6366f1"),

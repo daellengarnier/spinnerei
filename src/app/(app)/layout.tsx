@@ -14,7 +14,7 @@ import { Icon, type IconName } from "@/components/Icon";
 const TABS: { href: string; label: string; icon: IconName; exact: boolean; badge?: boolean }[] = [
   { href: "/", label: "Anlässe", icon: "home", exact: true },
   { href: "/mine", label: "Meine Sachen", icon: "tasks", exact: false },
-  { href: "/inbox", label: "Inbox", icon: "bell", exact: false, badge: true },
+  { href: "/hq", label: "HQ", icon: "tent", exact: false },
 ];
 
 export default function AppLayout({ children }: { children: ReactNode }) {
