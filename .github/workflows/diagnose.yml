@@ -1,5 +1,5 @@
-# Manuell auslösbare Diagnose: Zustand von App-Container & Reverse-Proxy
-# auf dem VPS prüfen (nur lesend).
+# Einmalig: VAPID-Schlüssel für Web-Push auf dem VPS einrichten.
+# Schlüssel werden auf dem VPS generiert und landen NIE in den Logs.
 name: Diagnose VPS
 
 on:
@@ -11,7 +11,7 @@ jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: Diagnose via SSH
+      - name: VAPID einrichten via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -19,19 +19,20 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
-            set -uo pipefail
-            echo "=== docker ps ==="
-            docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
-            echo "=== spinnerei-app logs (letzte 60 Zeilen) ==="
-            docker logs --tail 60 spinnerei-app 2>&1 || true
-            echo "=== App intern erreichbar? ==="
-            docker run --rm --network proxy curlimages/curl:8.10.1 -sS -o /dev/null -w "spinnerei-app:3000 -> %{http_code}\n" http://spinnerei-app:3000/login || true
-            echo "=== Caddy-Container suchen ==="
-            docker ps --format '{{.Names}} {{.Image}}' | grep -i caddy || echo "kein Caddy-Container gefunden"
-            echo "=== Caddy-Konfig: spinnerei erwähnt? ==="
-            for f in /opt/ambardaellen/Caddyfile /opt/ambardaellen/caddy/Caddyfile /opt/ambardaellen/deploy/Caddyfile; do
-              if [ -f "$f" ]; then echo "--- $f ---"; grep -n -A 4 -i "spinnerei\|hausfest" "$f" || echo "(kein spinnerei/hausfest-Eintrag)"; fi
-            done
-            find /opt -maxdepth 3 -name "Caddyfile" 2>/dev/null || true
-            echo "=== Netzwerk proxy: Mitglieder ==="
-            docker network inspect proxy --format '{{range .Containers}}{{.Name}} {{end}}' || true
+            set -euo pipefail
+            cd /opt/spinnerei
+            if grep -q VAPID_PUBLIC_KEY .env 2>/dev/null; then
+              echo "VAPID bereits konfiguriert."
+            else
+              KEYS=$(docker run --rm node:22-alpine sh -c "npm i -g web-push@3.6.7 >/dev/null 2>&1 && node -e \"const wp=require('/usr/local/lib/node_modules/web-push');const k=wp.generateVAPIDKeys();console.log('VAPID_PUBLIC_KEY='+k.publicKey);console.log('VAPID_PRIVATE_KEY='+k.privateKey);\"")
+              printf '%s\n' "$KEYS" >> .env
+              echo "VAPID_SUBJECT=mailto:orga@spinnerei.al-daellen.ch" >> .env
+              echo "VAPID-Schlüssel generiert und in .env abgelegt."
+            fi
+            if ! grep -q VAPID_PUBLIC_KEY docker-compose.yml; then
+              sed -i 's|^\(      DATABASE_URL: .*\)$|\1\n      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}\n      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}\n      VAPID_SUBJECT: ${VAPID_SUBJECT:-}|' docker-compose.yml
+              echo "docker-compose.yml um VAPID-Variablen ergänzt."
+            fi
+            docker compose up -d
+            sleep 5
+            docker exec spinnerei-app sh -c 'test -n "$VAPID_PUBLIC_KEY" && echo "App hat VAPID_PUBLIC_KEY: ja" || echo "App hat VAPID_PUBLIC_KEY: NEIN"'
