@@ -63,7 +63,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return s === "" || /^\d{2}:\d{2}$/.test(s) ? s : null;
   };
 
-  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; petzilink: string; art: string; zugang: string; drivelink: string; abendverantwortungUserId: number | null; normaltarifCents: number | null; solitarifCents: number | null }> = {};
+  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; mitEssen: boolean | null; petzilink: string; art: string; zugang: string; drivelink: string; abendverantwortungUserId: number | null; normaltarifCents: number | null; solitarifCents: number | null }> = {};
   if (body?.name !== undefined) {
     const name = String(body.name).trim();
     if (!name) return Response.json({ error: "Name darf nicht leer sein" }, { status: 400 });
@@ -80,6 +80,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (wert === null) return Response.json({ error: "Zeit als HH:MM" }, { status: 400 });
       patch[feld] = wert;
     }
+  }
+  if (body?.mitEssen !== undefined) {
+    if (body.mitEssen !== null && typeof body.mitEssen !== "boolean") {
+      return Response.json({ error: "mitEssen: true, false oder null" }, { status: 400 });
+    }
+    patch.mitEssen = body.mitEssen;
+    // Ohne Essen (oder wieder offen) braucht es keine Essenszeit mehr.
+    if (body.mitEssen !== true) patch.essen = "";
   }
   if (body?.art !== undefined) patch.art = String(body.art).trim();
   if (body?.zugang !== undefined) {

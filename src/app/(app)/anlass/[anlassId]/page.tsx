@@ -21,6 +21,7 @@ interface Anlass {
   tueroeffnung: string;
   essen: string;
   ende: string;
+  mitEssen: boolean | null;
   petzilink: string;
   art: string;
   zugang: string;
@@ -149,7 +150,6 @@ export default function AnlassDashboard() {
 
 const ZEIT_FELDER = [
   { key: "tueroeffnung", label: "Türöffnung" },
-  { key: "essen", label: "Essen" },
   { key: "ende", label: "Ende Anlass" },
 ] as const;
 
@@ -179,6 +179,18 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
   };
 
   const nutzer = useUsers();
+  const [mitEssen, setMitEssen] = useState<boolean | null>(anlass.mitEssen);
+  const saveMitEssen = async (wert: boolean | null) => {
+    setMitEssen(wert);
+    if (wert !== true) setWerte((w) => ({ ...w, essen: "" }));
+    setError("");
+    try {
+      await api.patch(`/anlaesse/${anlass.id}`, { mitEssen: wert });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
   const [tarife, setTarife] = useState({
     normaltarifCents: anlass.normaltarifCents,
     solitarifCents: anlass.solitarifCents,
@@ -216,16 +228,26 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
     ...(werte.zugang ? [] : ["Privat/Öffentlich"]),
     ...(avId ? [] : ["Abendverantwortung"]),
     ...ZEIT_FELDER.filter((f) => !werte[f.key]).map((f) => f.label),
+    ...(mitEssen === null ? ["Essen (mit/ohne)"] : mitEssen && !werte.essen ? ["Zeit Essen"] : []),
     ...(werte.petzilink ? [] : ["Petzilink"]),
     ...(tarife.normaltarifCents != null || tarife.solitarifCents != null ? [] : ["Ticketpreise"]),
     ...(werte.drivelink ? [] : ["Drive-Ordner"]),
   ];
   const sortierteActs = [...acts].sort((a, b) => (a.showtime || "99:99").localeCompare(b.showtime || "99:99"));
 
+  // Alles ausgefüllt → Formular standardmässig eingeklappt; von Hand umschaltbar.
+  const [manuellOffen, setManuellOffen] = useState<boolean | null>(null);
+  const offen = manuellOffen ?? fehlend.length > 0;
+
   return (
     <section className="card p-3.5">
-      <h2 className="block-title mb-2.5">Anlassübersicht</h2>
+      <button className="flex w-full items-center justify-between gap-3" onClick={() => setManuellOffen(!offen)}>
+        <h2 className="block-title">Anlassübersicht</h2>
+        <Icon name="chevron" size={16} className={`text-mute transition-transform ${offen ? "-rotate-90" : "rotate-90"}`} />
+      </button>
 
+      {offen && (
+      <div className="mt-2.5">
       {fehlend.length > 0 && (
         <p className="mb-2.5 border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-xs text-accent">
           Noch offen: {fehlend.join(", ")} — bitte ausfüllen, sobald bekannt.
@@ -282,7 +304,7 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
         </select>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {ZEIT_FELDER.map((f) => (
           <div key={f.key}>
             <label className="label text-xs">{f.label}</label>
@@ -294,6 +316,32 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
             />
           </div>
         ))}
+      </div>
+
+      <div className="mt-2 flex items-end gap-2">
+        <div className="shrink-0">
+          <label className="label text-xs">Essen</label>
+          <div className="seg p-0.5">
+            {[
+              { wert: true, label: "Mit" },
+              { wert: false, label: "Ohne" },
+            ].map((o) => (
+              <button
+                key={o.label}
+                className={`seg-item px-2.5 py-1 text-xs ${mitEssen === o.wert ? "on" : ""}`}
+                onClick={() => saveMitEssen(mitEssen === o.wert ? null : o.wert)}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {mitEssen === true && (
+          <div className="min-w-0 flex-1">
+            <label className="label text-xs">Zeit Essen</label>
+            <input type="time" className="input px-2 py-1.5 text-sm" value={werte.essen} onChange={(e) => save("essen", e.target.value)} />
+          </div>
+        )}
       </div>
 
       <div className="mt-2 flex items-end gap-2">
@@ -353,6 +401,8 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
         )}
       </div>
       {error && <p className="err-box mt-2">{error}</p>}
+      </div>
+      )}
 
       {sortierteActs.length > 0 && (
         <div className="mt-3 border-t border-line pt-2.5">

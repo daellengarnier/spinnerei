@@ -34,6 +34,8 @@ export const anlaesse = pgTable("anlaesse", {
   // Eckzeiten des Anlasses (Anlassübersicht), als 'HH:MM'.
   tueroeffnung: text("tueroeffnung").notNull().default(""),
   essen: text("essen").notNull().default(""),
+  // Essen am Anlass: null = noch offen, true = mit (Zeit in essen), false = ohne.
+  mitEssen: boolean("mitEssen"),
   ende: text("ende").notNull().default(""),
   // Petzi-Ticketlink des Anlasses (Anlassübersicht).
   petzilink: text("petzilink").notNull().default(""),
