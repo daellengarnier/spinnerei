@@ -47,6 +47,11 @@ export function PushPrompt() {
       setTimeout(() => setShow(false), 2200);
     } else {
       setMsg(r.error ?? "Hat nicht geklappt.");
+      // Erlaubnis ist erteilt (oder abgelehnt) → Banner hat seinen Zweck erfüllt,
+      // nach kurzem Anzeigen der Meldung ausblenden statt stehen zu bleiben.
+      if (typeof Notification !== "undefined" && Notification.permission !== "default") {
+        setTimeout(() => setShow(false), 3000);
+      }
     }
   };
 

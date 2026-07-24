@@ -1,0 +1,1 @@
+ALTER TABLE "anlaesse" ADD COLUMN "stichwort" text DEFAULT '' NOT NULL;

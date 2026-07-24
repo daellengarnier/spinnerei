@@ -1,0 +1,1 @@
+ALTER TABLE "anlaesse" ADD COLUMN "zugang" text DEFAULT '' NOT NULL;

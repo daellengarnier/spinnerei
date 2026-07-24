@@ -22,6 +22,8 @@ interface Anlass {
   ende: string;
   petzilink: string;
   art: string;
+  stichwort: string;
+  zugang: string;
 }
 
 interface AnlassAct {
@@ -135,6 +137,8 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
     ende: anlass.ende,
     petzilink: anlass.petzilink,
     art: anlass.art,
+    stichwort: anlass.stichwort,
+    zugang: anlass.zugang,
   });
   const [error, setError] = useState("");
 
@@ -149,8 +153,11 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
     }
   };
 
+  const brauchtStichwort = !!werte.art && werte.art.toLowerCase() !== "konzert";
   const fehlend = [
     ...(werte.art ? [] : ["Art des Anlasses"]),
+    ...(werte.zugang ? [] : ["Privat/Öffentlich"]),
+    ...(brauchtStichwort && !werte.stichwort ? ["Stichwort (z. B. Musikrichtung)"] : []),
     ...ZEIT_FELDER.filter((f) => !werte[f.key]).map((f) => f.label),
     ...(werte.petzilink ? [] : ["Petzilink"]),
   ];
@@ -166,15 +173,34 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
         </p>
       )}
 
-      <div className="mb-2">
-        <label className="label text-xs">Art des Anlasses</label>
-        <input
-          list="anlass-arten"
-          className="input px-2 py-1.5 text-sm"
-          placeholder="z. B. Konzert, Party, …"
-          defaultValue={werte.art}
-          onBlur={(e) => e.target.value.trim() !== werte.art && save("art", e.target.value.trim())}
-        />
+      <div className="mb-2 flex gap-2">
+        <div className="min-w-0 flex-1">
+          <label className="label text-xs">Art des Anlasses</label>
+          <input
+            list="anlass-arten"
+            className="input px-2 py-1.5 text-sm"
+            placeholder="z. B. Konzert, Party, …"
+            defaultValue={werte.art}
+            onBlur={(e) => e.target.value.trim() !== werte.art && save("art", e.target.value.trim())}
+          />
+        </div>
+        <div className="shrink-0">
+          <label className="label text-xs">Zugang</label>
+          <div className="seg p-0.5">
+            {[
+              { wert: "oeffentlich", label: "Öffentlich" },
+              { wert: "privat", label: "Privat" },
+            ].map((o) => (
+              <button
+                key={o.wert}
+                className={`seg-item px-2.5 py-1 text-xs ${werte.zugang === o.wert ? "on" : ""}`}
+                onClick={() => save("zugang", werte.zugang === o.wert ? "" : o.wert)}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <datalist id="anlass-arten">
           <option value="Konzert" />
           <option value="Party" />
@@ -183,6 +209,16 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
           <option value="Fest" />
           <option value="Vermietung" />
         </datalist>
+      </div>
+
+      <div className="mb-2">
+        <label className="label text-xs">Stichwort (max. 3 Wörter, z. B. Psytrance, Techno)</label>
+        <input
+          className="input px-2 py-1.5 text-sm"
+          placeholder="z. B. Psytrance"
+          defaultValue={werte.stichwort}
+          onBlur={(e) => e.target.value.trim() !== werte.stichwort && save("stichwort", e.target.value.trim().split(/\s+/).filter(Boolean).slice(0, 3).join(" "))}
+        />
       </div>
 
       <div className="grid grid-cols-3 gap-2">
