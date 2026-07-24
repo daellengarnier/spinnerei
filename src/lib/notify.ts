@@ -13,12 +13,14 @@ const PUSH_TITLE: Record<ActivityTyp, string> = {
   sitzung: "Sitzung",
   neuer_anlass: "Neuer Anlass",
   av_check: "Abendverantwortung",
+  booking: "Booking",
 };
 
 function refUrl(refTyp: string, refId: number): string {
   if (refTyp === "todo") return `/todo/${refId}`;
   if (refTyp === "ressort") return `/ressort/${refId}?tab=pinnwand`;
-  if (refTyp === "meeting" || refTyp === "sitzung") return `/meetings/${refId}`;
+  if (refTyp === "sitzung") return `/ressort/${refId}?tab=sitzungen`;
+  if (refTyp === "booking") return `/ressort/${refId}?tab=anfragen`;
   if (refTyp === "anlass") return `/anlass/${refId}`;
   return "/inbox";
 }

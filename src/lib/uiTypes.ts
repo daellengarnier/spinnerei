@@ -3,7 +3,7 @@ export type Rolle = "admin" | "mitglied";
 export type TodoStatus = "offen" | "in_arbeit" | "erledigt";
 export type Verfuegbarkeit = "ja" | "vielleicht" | "nein";
 export type MeetingStatus = "umfrage_laeuft" | "terminFixiert" | "erledigt";
-export type ActivityTyp = "mention" | "zuweisung" | "neuer_kommentar" | "sitzung" | "neuer_anlass" | "av_check";
+export type ActivityTyp = "mention" | "zuweisung" | "neuer_kommentar" | "sitzung" | "neuer_anlass" | "av_check" | "booking";
 
 export interface User {
   id: number;
@@ -31,6 +31,8 @@ export interface RessortSummary {
   hatZeitplan?: boolean;
   hatActs?: boolean;
   hatFinanzen?: boolean;
+  hatSitzungen?: boolean;
+  hatBooking?: boolean;
   leads: UserLite[];
   openTodos: number;
   totalTodos: number;
@@ -48,6 +50,8 @@ export interface Ressort {
   hatZeitplan?: boolean;
   hatFinanzen?: boolean;
   hatActs?: boolean;
+  hatSitzungen?: boolean;
+  hatBooking?: boolean;
   leads: UserLite[];
 }
 

@@ -13,6 +13,8 @@ import { Zeitplan } from "@/components/Zeitplan";
 import { Finanzen } from "@/components/Finanzen";
 import { Acts } from "@/components/Acts";
 import { Abrechnung } from "@/components/Abrechnung";
+import { Sitzungen } from "@/components/Sitzungen";
+import { Booking } from "@/components/Booking";
 import { relTime } from "@/lib/uiUtil";
 import type { ProtocolRef, Ressort, SubRessort, Todo } from "@/lib/uiTypes";
 import { Icon } from "@/components/Icon";
@@ -24,8 +26,8 @@ interface DetailResponse {
   protocols: ProtocolRef[];
 }
 
-type TabKey = "todos" | "pinnwand" | "zeitplan" | "bars" | "finanzen" | "abrechnung" | "acts";
-const TAB_KEYS: TabKey[] = ["todos", "pinnwand", "zeitplan", "bars", "finanzen", "abrechnung", "acts"];
+type TabKey = "todos" | "pinnwand" | "zeitplan" | "bars" | "finanzen" | "abrechnung" | "acts" | "sitzungen" | "anfragen";
+const TAB_KEYS: TabKey[] = ["todos", "pinnwand", "zeitplan", "bars", "finanzen", "abrechnung", "acts", "sitzungen", "anfragen"];
 
 export default function RessortPage() {
   const params = useParams<{ id: string }>();
@@ -71,7 +73,19 @@ export default function RessortPage() {
   // Spezialansichten öffnen standardmäßig ihren eigenen Tab.
   // Programmübersicht (Line-up/Bars) braucht keine Todos/Pinnwand; Acts schon.
   const spezial = !!ressort.hatZeitplan;
-  const activeTab = tab ?? (ressort.hatActs ? "acts" : ressort.hatFinanzen ? "finanzen" : ressort.hatZeitplan ? "zeitplan" : "todos");
+  const activeTab =
+    tab ??
+    (ressort.hatSitzungen
+      ? "sitzungen"
+      : ressort.hatBooking
+        ? "anfragen"
+        : ressort.hatActs
+          ? "acts"
+          : ressort.hatFinanzen
+            ? "finanzen"
+            : ressort.hatZeitplan
+              ? "zeitplan"
+              : "todos");
 
   return (
     <div className="space-y-4">
@@ -117,6 +131,16 @@ export default function RessortPage() {
       )}
 
       <div className="seg overflow-x-auto">
+        {ressort.hatSitzungen && (
+          <button className={`seg-item whitespace-nowrap px-3 ${activeTab === "sitzungen" ? "on" : ""}`} onClick={() => setTab("sitzungen")}>
+            Sitzungen
+          </button>
+        )}
+        {ressort.hatBooking && (
+          <button className={`seg-item whitespace-nowrap px-3 ${activeTab === "anfragen" ? "on" : ""}`} onClick={() => setTab("anfragen")}>
+            Anfragen
+          </button>
+        )}
         {ressort.hatActs && (
           <button className={`seg-item whitespace-nowrap px-3 ${activeTab === "acts" ? "on" : ""}`} onClick={() => setTab("acts")}>
             Acts
@@ -159,7 +183,11 @@ export default function RessortPage() {
         )}
       </div>
 
-      {activeTab === "acts" ? (
+      {activeTab === "sitzungen" ? (
+        <Sitzungen ressortId={ressortId} />
+      ) : activeTab === "anfragen" ? (
+        <Booking ressortId={ressortId} />
+      ) : activeTab === "acts" ? (
         <Acts ressortId={ressortId} />
       ) : activeTab === "finanzen" && ressort.anlassId != null ? (
         <Finanzen ressortId={ressortId} anlassId={ressort.anlassId} />

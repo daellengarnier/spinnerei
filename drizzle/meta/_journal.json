@@ -127,6 +127,13 @@
       "when": 1784934689707,
       "tag": "0017_outstanding_jubilee",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1784935195880,
+      "tag": "0018_free_wolfsbane",
+      "breakpoints": true
     }
   ]
 }

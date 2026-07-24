@@ -21,7 +21,7 @@ export type Rolle = "admin" | "mitglied";
 export type TodoStatus = "offen" | "in_arbeit" | "erledigt";
 export type Verfuegbarkeit = "ja" | "vielleicht" | "nein";
 export type MeetingStatus = "umfrage_laeuft" | "terminFixiert" | "erledigt";
-export type ActivityTyp = "mention" | "zuweisung" | "neuer_kommentar" | "sitzung" | "neuer_anlass" | "av_check";
+export type ActivityTyp = "mention" | "zuweisung" | "neuer_kommentar" | "sitzung" | "neuer_anlass" | "av_check" | "booking";
 export type ParentTyp = "todo" | "ressort";
 
 // Ein Anlass = ein Event in der Spinnerei (Hausfest, Konzert, Kinderdisco, …).
@@ -92,8 +92,63 @@ export const ressorts = pgTable("ressorts", {
   hatFinanzen: boolean("hatFinanzen").notNull().default(false),
   // Ressort Acts verwaltet Bands/DJs (Rider, Kosten, Übernachtung, Promo).
   hatActs: boolean("hatActs").notNull().default(false),
+  // HQ-Ressort Sitzungen: Sitzungsplanung mit Traktanden.
+  hatSitzungen: boolean("hatSitzungen").notNull().default(false),
+  // HQ-Ressort Booking: Anfragen/Ideen mit Stimmungsbild.
+  hatBooking: boolean("hatBooking").notNull().default(false),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Sitzungen des Vereins (HQ-Ressort Sitzungen), mit Traktandenliste.
+export const sitzungen = pgTable("sitzungen", {
+  id: serial("id").primaryKey(),
+  ressortId: integer("ressortId")
+    .notNull()
+    .references(() => ressorts.id, { onDelete: "cascade" }),
+  datum: text("datum").notNull(), // 'YYYY-MM-DD'
+  startzeit: text("startzeit").notNull().default(""), // 'HH:MM'
+  ort: text("ort").notNull().default(""),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const traktanden = pgTable("traktanden", {
+  id: serial("id").primaryKey(),
+  sitzungId: integer("sitzungId")
+    .notNull()
+    .references(() => sitzungen.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  erledigt: boolean("erledigt").notNull().default(false),
+  erstelltVon: integer("erstelltVon").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Booking-Anfragen/Ideen (HQ-Ressort Booking) mit Stimmungsbild pro Person.
+export const bookingAnfragen = pgTable("booking_anfragen", {
+  id: serial("id").primaryKey(),
+  ressortId: integer("ressortId")
+    .notNull()
+    .references(() => ressorts.id, { onDelete: "cascade" }),
+  titel: text("titel").notNull(),
+  notiz: text("notiz").notNull().default(""),
+  link: text("link").notNull().default(""),
+  erstelltVon: integer("erstelltVon").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const bookingVotes = pgTable(
+  "booking_votes",
+  {
+    id: serial("id").primaryKey(),
+    anfrageId: integer("anfrageId")
+      .notNull()
+      .references(() => bookingAnfragen.id, { onDelete: "cascade" }),
+    userId: integer("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    wert: text("wert").$type<Verfuegbarkeit>().notNull(), // 'ja' | 'vielleicht' | 'nein'
+  },
+  (t) => [uniqueIndex("uq_booking_vote").on(t.anfrageId, t.userId)],
+);
 
 // Abrechnung pro Anlass (digitalisiert das bisherige Excel-Sheet).
 // Beträge in Rappen. Listen (Eintritts-Stufen, Miete, manuelle Gagen) als JSON,

@@ -24,10 +24,10 @@ const STANDARD_RESSORTS = [
 
 // Vereinsressorts im HQ (ohne Anlass-Bezug, anlassId NULL).
 const HQ_RESSORTS = [
-  { name: "Sitzungen", farbe: "#38bdf8" },
+  { name: "Sitzungen", farbe: "#38bdf8", sitzungen: true },
   { name: "Retraite", farbe: "#22c55e" },
-  { name: "Revision", farbe: "#a78bfa" },
-  { name: "Booking", farbe: "#f472b6" },
+  { name: "Infrastruktur", farbe: "#a78bfa" },
+  { name: "Booking", farbe: "#f472b6", booking: true },
 ];
 
 // Kollektiv-Mitglieder als vorbelegte Profile (claimed=false). Beim
@@ -83,8 +83,8 @@ try {
     const existing = await sql`SELECT id FROM ressorts WHERE "anlassId" IS NULL AND name = ${r.name} LIMIT 1`;
     if (existing[0]) continue;
     await sql`
-      INSERT INTO ressorts ("anlassId", name, beschreibung, farbe, reihenfolge, "hatZeitplan", "hatFinanzen", "hatActs")
-      VALUES (NULL, ${r.name}, ${""}, ${r.farbe}, ${hqOrder}, false, false, false)`;
+      INSERT INTO ressorts ("anlassId", name, beschreibung, farbe, reihenfolge, "hatZeitplan", "hatFinanzen", "hatActs", "hatSitzungen", "hatBooking")
+      VALUES (NULL, ${r.name}, ${""}, ${r.farbe}, ${hqOrder}, false, false, false, ${r.sitzungen ?? false}, ${r.booking ?? false})`;
     console.log(`[seed] HQ-Ressort „${r.name}" angelegt.`);
   }
 

@@ -13,12 +13,14 @@ const ICON: Record<string, IconName> = {
   zuweisung: "check",
   neuer_kommentar: "chat",
   sitzung: "calendar",
+  booking: "star",
 };
 
 function targetPath(it: ActivityItem): string {
   if (it.refTyp === "todo") return `/todo/${it.refId}`;
   if (it.refTyp === "ressort") return `/ressort/${it.refId}?tab=pinnwand`;
-  if (it.refTyp === "meeting") return `/meetings/${it.refId}`;
+  if (it.refTyp === "sitzung") return `/ressort/${it.refId}?tab=sitzungen`;
+  if (it.refTyp === "booking") return `/ressort/${it.refId}?tab=anfragen`;
   if (it.refTyp === "anlass") return `/anlass/${it.refId}`;
   return "/";
 }

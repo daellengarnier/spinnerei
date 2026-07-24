@@ -13,7 +13,7 @@ const MAP: { match: RegExp; icon: IconName }[] = [
   { match: /finanz|budget|geld|kasse/i, icon: "coins" },
   { match: /sitzung|meeting/i, icon: "chat" },
   { match: /retraite|klausur/i, icon: "leaf" },
-  { match: /revision/i, icon: "file" },
+  { match: /infrastruktur|revision/i, icon: "tools" },
   { match: /booking/i, icon: "calendar" },
 ];
 
