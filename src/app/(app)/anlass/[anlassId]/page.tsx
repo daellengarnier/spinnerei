@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/apiClient";
-import { Avatar, EmptyState, Spinner } from "@/components/Ui";
+import { Avatar, EmptyState, Modal, Spinner } from "@/components/Ui";
 import { Icon } from "@/components/Icon";
 import { ressortIcon } from "@/lib/ressortIcon";
 import { ressortHint } from "@/lib/ressortHint";
@@ -26,6 +26,8 @@ interface Anlass {
   zugang: string;
   drivelink: string;
   abendverantwortungUserId: number | null;
+  normaltarifCents: number | null;
+  solitarifCents: number | null;
 }
 
 interface AnlassAct {
@@ -46,6 +48,7 @@ export default function AnlassDashboard() {
   const [acts, setActs] = useState<AnlassAct[]>([]);
   const [ressorts, setRessorts] = useState<RessortSummary[] | null>(null);
   const [error, setError] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     if (!anlassId) return;
@@ -71,9 +74,29 @@ export default function AnlassDashboard() {
         <Link href="/" className="text-sm text-mute">
           ← Alle Anlässe
         </Link>
-        <h1 className="page-title mt-1">{anlass.name}</h1>
+        <div className="mt-1 flex items-start justify-between gap-3">
+          <h1 className="page-title">{anlass.name}</h1>
+          <button
+            className="grid h-8 w-8 shrink-0 place-items-center border border-line2 text-dim active:scale-95"
+            onClick={() => setEditOpen(true)}
+            aria-label="Anlass bearbeiten"
+          >
+            <Icon name="pencil" size={14} />
+          </button>
+        </div>
         <p className="mt-0.5 text-sm text-mute">{formatDate(anlass.datum)}</p>
       </div>
+
+      {editOpen && (
+        <AnlassEditModal
+          anlass={anlass}
+          onClose={() => setEditOpen(false)}
+          onSaved={(name, datum) => {
+            setAnlass({ ...anlass, name, datum });
+            setEditOpen(false);
+          }}
+        />
+      )}
 
       <Uebersicht anlass={anlass} acts={acts} onSaved={(a) => setAnlass(a)} />
 
@@ -156,6 +179,27 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
   };
 
   const nutzer = useUsers();
+  const [tarife, setTarife] = useState({
+    normaltarifCents: anlass.normaltarifCents,
+    solitarifCents: anlass.solitarifCents,
+  });
+  const saveTarif = async (key: keyof typeof tarife, eingabe: string) => {
+    const text = eingabe.trim().replace(",", ".");
+    const cents = text === "" ? null : Math.round(Number(text) * 100);
+    if (cents !== null && (!Number.isFinite(cents) || cents < 0)) {
+      setError("Ticketpreis als Betrag in CHF, z. B. 25 oder 15.50");
+      return;
+    }
+    if (cents === tarife[key]) return;
+    setTarife((t) => ({ ...t, [key]: cents }));
+    setError("");
+    try {
+      await api.patch(`/anlaesse/${anlass.id}`, { [key]: cents });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
   const [avId, setAvId] = useState<number | null>(anlass.abendverantwortungUserId);
   const saveAv = async (id: number | null) => {
     setAvId(id);
@@ -173,6 +217,7 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
     ...(avId ? [] : ["Abendverantwortung"]),
     ...ZEIT_FELDER.filter((f) => !werte[f.key]).map((f) => f.label),
     ...(werte.petzilink ? [] : ["Petzilink"]),
+    ...(tarife.normaltarifCents != null || tarife.solitarifCents != null ? [] : ["Ticketpreise"]),
     ...(werte.drivelink ? [] : ["Drive-Ordner"]),
   ];
   const sortierteActs = [...acts].sort((a, b) => (a.showtime || "99:99").localeCompare(b.showtime || "99:99"));
@@ -272,6 +317,27 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
         )}
       </div>
 
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        {(
+          [
+            { key: "normaltarifCents", label: "Normaltarif (CHF)" },
+            { key: "solitarifCents", label: "Solitarif (CHF)" },
+          ] as const
+        ).map((f) => (
+          <div key={f.key}>
+            <label className="label text-xs">{f.label}</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              className="input px-2 py-1.5 text-sm"
+              placeholder="z. B. 25"
+              defaultValue={tarife[f.key] != null ? String(tarife[f.key]! / 100) : ""}
+              onBlur={(e) => saveTarif(f.key, e.target.value)}
+            />
+          </div>
+        ))}
+      </div>
+
       <div className="mt-2 flex items-end gap-2">
         <div className="min-w-0 flex-1">
           <label className="label text-xs">Drive-Ordner (Rider, Plakate, Dokumente)</label>
@@ -315,5 +381,66 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
         </p>
       )}
     </section>
+  );
+}
+
+// Name & Datum des Anlasses bearbeiten.
+function AnlassEditModal({
+  anlass,
+  onClose,
+  onSaved,
+}: {
+  anlass: Anlass;
+  onClose: () => void;
+  onSaved: (name: string, datum: string) => void;
+}) {
+  const [name, setName] = useState(anlass.name);
+  const [datum, setDatum] = useState(anlass.datum);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const save = async () => {
+    if (!name.trim()) return setError("Name erforderlich");
+    if (!datum) return setError("Datum erforderlich");
+    setSaving(true);
+    setError("");
+    try {
+      await api.patch(`/anlaesse/${anlass.id}`, { name: name.trim(), datum });
+      onSaved(name.trim(), datum);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Anlass bearbeiten"
+      footer={
+        <div className="flex gap-2">
+          <button className="btn-ghost flex-1" onClick={onClose}>
+            Abbrechen
+          </button>
+          <button className="btn-primary flex-1" onClick={save} disabled={saving}>
+            Speichern
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="label">Name</label>
+          <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+        </div>
+        <div>
+          <label className="label">Datum</label>
+          <input type="date" className="input" value={datum} onChange={(e) => setDatum(e.target.value)} />
+        </div>
+        {error && <p className="err-box">{error}</p>}
+      </div>
+    </Modal>
   );
 }

@@ -45,6 +45,9 @@ export const anlaesse = pgTable("anlaesse", {
   drivelink: text("drivelink").notNull().default(""),
   // Abendverantwortung (AV) des Anlasses.
   abendverantwortungUserId: integer("abendverantwortungUserId"),
+  // Ticketpreise in Rappen (null = noch nicht festgelegt).
+  normaltarifCents: integer("normaltarifCents"),
+  solitarifCents: integer("solitarifCents"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

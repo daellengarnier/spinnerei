@@ -6,7 +6,7 @@ import { api } from "@/lib/apiClient";
 import { EmptyState, Modal, Spinner } from "@/components/Ui";
 import { Icon } from "@/components/Icon";
 import { useAuth } from "@/components/AuthContext";
-import { icsHerunterladen, type UebersichtAnlass } from "@/lib/uebersichtExport";
+import { icsHerunterladen, ticketpreisText, type UebersichtAnlass } from "@/lib/uebersichtExport";
 import { istFolgetag } from "@/lib/uiUtil";
 
 interface AnlassSummary {
@@ -187,9 +187,12 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
         <div className="border-t border-line px-3.5 pb-3.5 pt-2.5">
           {detail ? (
             <>
-              {(detail.abendverantwortung || detail.tueroeffnung || detail.essen || detail.ende || detail.petzilink) && (
+              {(detail.abendverantwortung || detail.tueroeffnung || detail.essen || detail.ende || detail.petzilink || ticketpreisText(detail.normaltarifCents, detail.solitarifCents)) && (
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-dim">
                   {detail.abendverantwortung && <span className="text-ink">AV: {detail.abendverantwortung}</span>}
+                  {ticketpreisText(detail.normaltarifCents, detail.solitarifCents) && (
+                    <span className="text-ink">{ticketpreisText(detail.normaltarifCents, detail.solitarifCents)}</span>
+                  )}
                   {detail.tueroeffnung && <span>Türöffnung {detail.tueroeffnung}</span>}
                   {detail.essen && <span>Essen {detail.essen}</span>}
                   {detail.ende && (

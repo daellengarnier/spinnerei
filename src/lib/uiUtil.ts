@@ -66,6 +66,12 @@ export function isOverdue(fristDatum: string | null, status: TodoStatus): boolea
   return d.getTime() < Date.now();
 }
 
+// Rappen als Schweizer Preisangabe: 2500 → "25.–", 1550 → "15.50".
+export function chfPreis(cents: number): string {
+  const franken = cents / 100;
+  return Number.isInteger(franken) ? `${franken}.–` : franken.toFixed(2);
+}
+
 // Ende vor der Türöffnung (z. B. 03:30) = Anlass endet am Folgetag.
 export function istFolgetag(tueroeffnung: string, ende: string): boolean {
   if (!ende) return false;

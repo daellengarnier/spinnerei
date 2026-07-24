@@ -56,6 +56,10 @@ export async function GET() {
       essen: a.essen,
       ende: a.ende,
       petzilink: a.petzilink,
+      drivelink: a.drivelink,
+      abendverantwortung: (a.abendverantwortungUserId && userName.get(a.abendverantwortungUserId)) || "",
+      normaltarifCents: a.normaltarifCents,
+      solitarifCents: a.solitarifCents,
       acts: (actsProAnlass.get(a.id) ?? []).map((x) => ({
         name: x.name,
         typ: x.typ,

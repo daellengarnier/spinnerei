@@ -1,5 +1,14 @@
 // Kalender-Export (.ics) der Anlässe — von der Anlässe-Startseite aufgerufen.
-import { istFolgetag } from "@/lib/uiUtil";
+import { chfPreis, istFolgetag } from "@/lib/uiUtil";
+
+// "Tickets 25.– / Soli 15.–" — leer, wenn keine Preise erfasst sind.
+export function ticketpreisText(normaltarifCents: number | null, solitarifCents: number | null): string {
+  const teile = [
+    normaltarifCents != null && chfPreis(normaltarifCents),
+    solitarifCents != null && `Soli ${chfPreis(solitarifCents)}`,
+  ].filter(Boolean);
+  return teile.length ? `Tickets ${teile.join(" / ")}` : "";
+}
 
 export interface UebersichtAct {
   name: string;
@@ -21,6 +30,8 @@ export interface UebersichtAnlass {
   petzilink: string;
   drivelink: string;
   abendverantwortung: string;
+  normaltarifCents: number | null;
+  solitarifCents: number | null;
   acts: UebersichtAct[];
 }
 
@@ -42,6 +53,7 @@ export function icsHerunterladen(anlaesse: UebersichtAnlass[], dateiname = "Spin
     const zugangLabel = a.zugang === "privat" ? "Privat" : a.zugang === "oeffentlich" ? "Öffentlich" : "";
     const beschreibung = [
       [a.art, zugangLabel].filter(Boolean).join(" · "),
+      ticketpreisText(a.normaltarifCents, a.solitarifCents),
       a.essen && `Essen ${a.essen}`,
       ...a.acts.map((x) => `${x.showtime ? x.showtime + " " : ""}${x.name}${x.genre || x.herkunft ? ` (${[x.genre, x.herkunft].filter(Boolean).join(", ")})` : ""}`),
     ]

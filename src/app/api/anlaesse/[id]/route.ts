@@ -48,15 +48,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   return Response.json({ anlass: rows[0], abendverantwortung, acts: anlassActs });
 }
 
-// Anlass ändern. Eckzeiten (Türöffnung/Essen/Ende) dürfen alle Mitglieder
-// pflegen; Name/Datum nur Admin.
+// Anlass ändern — alle Felder dürfen alle Mitglieder pflegen (Vertrauensmodell);
+// nur Löschen bleibt Admin-Sache.
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const id = Number((await params).id);
   if (!id) return Response.json({ error: "Ungültige ID" }, { status: 400 });
   const body = await request.json().catch(() => ({}));
 
-  const wantsAdminFields = body?.name !== undefined || body?.datum !== undefined;
-  const auth = wantsAdminFields ? await requireAdmin() : await requireUser();
+  const auth = await requireUser();
   if (isResponse(auth)) return auth;
 
   const zeit = (v: unknown) => {
@@ -64,7 +63,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return s === "" || /^\d{2}:\d{2}$/.test(s) ? s : null;
   };
 
-  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; petzilink: string; art: string; zugang: string; drivelink: string; abendverantwortungUserId: number | null }> = {};
+  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; petzilink: string; art: string; zugang: string; drivelink: string; abendverantwortungUserId: number | null; normaltarifCents: number | null; solitarifCents: number | null }> = {};
   if (body?.name !== undefined) {
     const name = String(body.name).trim();
     if (!name) return Response.json({ error: "Name darf nicht leer sein" }, { status: 400 });
@@ -95,6 +94,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
   if (body?.abendverantwortungUserId !== undefined) {
     patch.abendverantwortungUserId = body.abendverantwortungUserId ? Number(body.abendverantwortungUserId) : null;
+  }
+  for (const feld of ["normaltarifCents", "solitarifCents"] as const) {
+    if (body?.[feld] !== undefined) {
+      if (body[feld] === null) {
+        patch[feld] = null;
+      } else {
+        const cents = Number(body[feld]);
+        if (!Number.isInteger(cents) || cents < 0) return Response.json({ error: "Ticketpreis muss ein Betrag ≥ 0 sein" }, { status: 400 });
+        patch[feld] = cents;
+      }
+    }
   }
   if (body?.drivelink !== undefined) {
     const link = String(body.drivelink).trim();
