@@ -155,7 +155,10 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
     }
   };
 
-  const brauchtStichwort = !!werte.art && werte.art.toLowerCase() !== "konzert";
+  // Stichwort nur für Anlässe ohne Konzert-Charakter (Party etc.) —
+  // bei (Doppel-)Konzerten kommt das Genre von den Acts.
+  const zeigeStichwort = !werte.art.toLowerCase().includes("konzert");
+  const brauchtStichwort = !!werte.art && zeigeStichwort;
   const fehlend = [
     ...(werte.art ? [] : ["Art des Anlasses"]),
     ...(werte.zugang ? [] : ["Privat/Öffentlich"]),
@@ -214,15 +217,17 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
         </datalist>
       </div>
 
-      <div className="mb-2">
-        <label className="label text-xs">Stichwort (max. 3 Wörter, z. B. Psytrance, Techno)</label>
-        <input
-          className="input px-2 py-1.5 text-sm"
-          placeholder="z. B. Psytrance"
-          defaultValue={werte.stichwort}
-          onBlur={(e) => e.target.value.trim() !== werte.stichwort && save("stichwort", e.target.value.trim().split(/\s+/).filter(Boolean).slice(0, 3).join(" "))}
-        />
-      </div>
+      {zeigeStichwort && (
+        <div className="mb-2">
+          <label className="label text-xs">Stichwort (max. 3 Wörter, z. B. Psytrance, Techno)</label>
+          <input
+            className="input px-2 py-1.5 text-sm"
+            placeholder="z. B. Psytrance"
+            defaultValue={werte.stichwort}
+            onBlur={(e) => e.target.value.trim() !== werte.stichwort && save("stichwort", e.target.value.trim().split(/\s+/).filter(Boolean).slice(0, 3).join(" "))}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-2">
         {ZEIT_FELDER.map((f) => (
