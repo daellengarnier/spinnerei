@@ -14,7 +14,7 @@ function parseChf(s: string): number {
   return Number.isFinite(v) ? Math.round(v * 100) : NaN;
 }
 
-export function Finanzen({ ressortId }: { ressortId: number }) {
+export function Finanzen({ ressortId, anlassId }: { ressortId: number; anlassId: number }) {
   const { user } = useAuth();
   const isAdmin = user?.rolle === "admin";
   const [expenses, setExpenses] = useState<Expense[] | null>(null);
@@ -22,15 +22,23 @@ export function Finanzen({ ressortId }: { ressortId: number }) {
   const [defizit, setDefizit] = useState(0);
   const [expModal, setExpModal] = useState<Expense | "new" | null>(null);
   const [budModal, setBudModal] = useState<{ kategorie: string; betragCents: number } | null>(null);
+  const [loadError, setLoadError] = useState("");
   const [defModal, setDefModal] = useState(false);
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
-  const loadExpenses = () => api.get<{ expenses: Expense[] }>(`/expenses?ressortId=${ressortId}`).then((d) => setExpenses(d.expenses));
+  const loadExpenses = () =>
+    api
+      .get<{ expenses: Expense[] }>(`/expenses?ressortId=${ressortId}`)
+      .then((d) => setExpenses(d.expenses))
+      .catch((e) => setLoadError((e as Error).message));
   const loadBudget = () =>
-    api.get<{ budgets: CategoryBudget[]; defizitgarantieCents: number }>(`/budget`).then((d) => {
-      setBudgets(d.budgets);
-      setDefizit(d.defizitgarantieCents);
-    });
+    api
+      .get<{ budgets: CategoryBudget[]; defizitgarantieCents: number }>(`/budget?anlass=${anlassId}`)
+      .then((d) => {
+        setBudgets(d.budgets);
+        setDefizit(d.defizitgarantieCents);
+      })
+      .catch((e) => setLoadError((e as Error).message));
   useEffect(() => {
     loadExpenses();
     loadBudget();
@@ -113,7 +121,9 @@ export function Finanzen({ ressortId }: { ressortId: number }) {
         </div>
       </div>
 
-      {loading ? (
+      {loadError ? (
+        <p className="err-box">{loadError}</p>
+      ) : loading ? (
         <Spinner label="Lade Finanzen …" />
       ) : (
         <>
@@ -212,6 +222,7 @@ export function Finanzen({ ressortId }: { ressortId: number }) {
       )}
       {budModal && (
         <CategoryBudgetModal
+          anlassId={anlassId}
           kategorie={budModal.kategorie}
           betragCents={budModal.betragCents}
           onClose={() => setBudModal(null)}
@@ -223,6 +234,7 @@ export function Finanzen({ ressortId }: { ressortId: number }) {
       )}
       {defModal && (
         <DefizitModal
+          anlassId={anlassId}
           betragCents={defizit}
           onClose={() => setDefModal(false)}
           onSaved={() => {
@@ -235,7 +247,7 @@ export function Finanzen({ ressortId }: { ressortId: number }) {
   );
 }
 
-function CategoryBudgetModal({ kategorie, betragCents, onClose, onSaved }: { kategorie: string; betragCents: number; onClose: () => void; onSaved: () => void }) {
+function CategoryBudgetModal({ anlassId, kategorie, betragCents, onClose, onSaved }: { anlassId: number; kategorie: string; betragCents: number; onClose: () => void; onSaved: () => void }) {
   const [betrag, setBetrag] = useState(betragCents ? (betragCents / 100).toFixed(2) : "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -245,7 +257,7 @@ function CategoryBudgetModal({ kategorie, betragCents, onClose, onSaved }: { kat
     setSaving(true);
     setError("");
     try {
-      await api.put("/budget", { kategorie, betragCents: cents });
+      await api.put("/budget", { anlassId, kategorie, betragCents: cents });
       onSaved();
     } catch (e) {
       setError((e as Error).message);
@@ -275,7 +287,7 @@ function CategoryBudgetModal({ kategorie, betragCents, onClose, onSaved }: { kat
   );
 }
 
-function DefizitModal({ betragCents, onClose, onSaved }: { betragCents: number; onClose: () => void; onSaved: () => void }) {
+function DefizitModal({ anlassId, betragCents, onClose, onSaved }: { anlassId: number; betragCents: number; onClose: () => void; onSaved: () => void }) {
   const [betrag, setBetrag] = useState(betragCents ? (betragCents / 100).toFixed(2) : "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -285,7 +297,7 @@ function DefizitModal({ betragCents, onClose, onSaved }: { betragCents: number; 
     setSaving(true);
     setError("");
     try {
-      await api.put("/budget", { defizitgarantieCents: cents });
+      await api.put("/budget", { anlassId, defizitgarantieCents: cents });
       onSaved();
     } catch (e) {
       setError((e as Error).message);

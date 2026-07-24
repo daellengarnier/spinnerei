@@ -162,7 +162,7 @@ export default function RessortPage() {
       {activeTab === "acts" ? (
         <Acts ressortId={ressortId} />
       ) : activeTab === "finanzen" ? (
-        <Finanzen ressortId={ressortId} />
+        <Finanzen ressortId={ressortId} anlassId={ressort.anlassId} />
       ) : activeTab === "abrechnung" ? (
         <Abrechnung anlassId={ressort.anlassId} />
       ) : activeTab === "zeitplan" ? (
