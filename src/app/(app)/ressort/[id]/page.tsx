@@ -12,6 +12,7 @@ import { AssigneePicker } from "@/components/AssigneePicker";
 import { Zeitplan } from "@/components/Zeitplan";
 import { Finanzen } from "@/components/Finanzen";
 import { Acts } from "@/components/Acts";
+import { Abrechnung } from "@/components/Abrechnung";
 import { relTime } from "@/lib/uiUtil";
 import type { ProtocolRef, Ressort, SubRessort, Todo } from "@/lib/uiTypes";
 import { Icon } from "@/components/Icon";
@@ -23,8 +24,8 @@ interface DetailResponse {
   protocols: ProtocolRef[];
 }
 
-type TabKey = "todos" | "pinnwand" | "zeitplan" | "bars" | "finanzen" | "acts";
-const TAB_KEYS: TabKey[] = ["todos", "pinnwand", "zeitplan", "bars", "finanzen", "acts"];
+type TabKey = "todos" | "pinnwand" | "zeitplan" | "bars" | "finanzen" | "abrechnung" | "acts";
+const TAB_KEYS: TabKey[] = ["todos", "pinnwand", "zeitplan", "bars", "finanzen", "abrechnung", "acts"];
 
 export default function RessortPage() {
   const params = useParams<{ id: string }>();
@@ -122,9 +123,14 @@ export default function RessortPage() {
           </button>
         )}
         {ressort.hatFinanzen && (
-          <button className={`seg-item whitespace-nowrap px-3 ${activeTab === "finanzen" ? "on" : ""}`} onClick={() => setTab("finanzen")}>
-            Ausgaben
-          </button>
+          <>
+            <button className={`seg-item whitespace-nowrap px-3 ${activeTab === "finanzen" ? "on" : ""}`} onClick={() => setTab("finanzen")}>
+              Ausgaben
+            </button>
+            <button className={`seg-item whitespace-nowrap px-3 ${activeTab === "abrechnung" ? "on" : ""}`} onClick={() => setTab("abrechnung")}>
+              Abrechnung
+            </button>
+          </>
         )}
         {ressort.hatZeitplan && (
           <>
@@ -157,6 +163,8 @@ export default function RessortPage() {
         <Acts ressortId={ressortId} />
       ) : activeTab === "finanzen" ? (
         <Finanzen ressortId={ressortId} />
+      ) : activeTab === "abrechnung" ? (
+        <Abrechnung anlassId={ressort.anlassId} />
       ) : activeTab === "zeitplan" ? (
         <Zeitplan ressortId={ressortId} board="programm" mode="acts" />
       ) : activeTab === "bars" ? (

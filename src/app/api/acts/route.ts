@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db/client";
 import { acts, actFiles, attachments, scheduleEntries, scheduleFloors, users, ressorts } from "@/lib/db/schema";
 import { syncActExpense } from "@/lib/actExpense";
 import { syncActSchedule } from "@/lib/actSchedule";
+import { gaestezimmerTodo } from "@/lib/actTodo";
 
 const TYPEN = ["band", "dj", "andere"];
 const normTyp = (v: unknown) => (TYPEN.includes(String(v)) ? String(v) : "band");
@@ -130,5 +131,6 @@ export async function POST(request: Request) {
   await syncActExpense(inserted[0].id, name, kostenCents);
   // Showtime (Floor + Von/Bis) → Line-up-Eintrag.
   await syncActSchedule(inserted[0].id, name, body?.floor !== undefined ? String(body.floor) : undefined, toMin(body?.startMin), toMin(body?.endMin));
+  if (body?.uebernachtung) await gaestezimmerTodo(ressortId, name, auth.id);
   return Response.json({ id: inserted[0].id }, { status: 201 });
 }

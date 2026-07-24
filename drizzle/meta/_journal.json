@@ -43,6 +43,13 @@
       "when": 1784916962833,
       "tag": "0005_foamy_vargas",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784917385872,
+      "tag": "0006_married_the_call",
+      "breakpoints": true
     }
   ]
 }

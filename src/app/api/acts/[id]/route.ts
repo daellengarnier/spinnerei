@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db/client";
 import { acts, actFiles, scheduleEntries } from "@/lib/db/schema";
 import { syncActExpense } from "@/lib/actExpense";
 import { syncActSchedule } from "@/lib/actSchedule";
+import { gaestezimmerTodo } from "@/lib/actTodo";
 
 const TYPEN = ["band", "dj", "andere"];
 const RUBRIKEN = ["techrider", "hospitality", "sonstiges"];
@@ -65,6 +66,8 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   await syncActExpense(actId, finalName, finalKosten);
   // Showtime (Floor + Von/Bis) → Line-up-Eintrag synchron halten.
   await syncActSchedule(actId, finalName, body?.floor !== undefined ? String(body.floor) : undefined, toMin(body?.startMin), toMin(body?.endMin));
+  // Übernachtung neu angeklickt → Todo „Gästezimmer organisieren" anlegen.
+  if (patch.uebernachtung === true && !act.uebernachtung) await gaestezimmerTodo(act.ressortId, finalName, auth.id);
   return Response.json({ ok: true });
 }
 

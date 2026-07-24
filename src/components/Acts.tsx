@@ -7,21 +7,6 @@ import { Icon } from "./Icon";
 import { formatChf } from "@/lib/finance";
 import type { Act, ActFile, ActRubrik, Attachment } from "@/lib/uiTypes";
 
-const START_HOUR = 16;
-const SPAN = 960;
-const STEP = 15;
-const pad = (n: number) => String(n).padStart(2, "0");
-const minToLabel = (min: number) => {
-  const total = START_HOUR * 60 + min;
-  return `${pad(Math.floor(total / 60) % 24)}:${pad(total % 60)}`;
-};
-const TIME_OPTIONS = Array.from({ length: SPAN / STEP + 1 }, (_, i) => i * STEP);
-
-interface Floor {
-  name: string;
-  farbe: string;
-}
-
 const TYP_LABEL: Record<string, string> = { band: "Band", dj: "DJ", andere: "Andere" };
 const RUBRIKEN: { key: ActRubrik; label: string }[] = [
   { key: "techrider", label: "Techrider" },
@@ -36,41 +21,22 @@ function parseChf(s: string): number {
 
 export function Acts({ ressortId }: { ressortId: number }) {
   const [acts, setActs] = useState<Act[] | null>(null);
-  const [floors, setFloors] = useState<Floor[]>([]);
   const [modal, setModal] = useState<Act | "new" | null>(null);
 
   const load = () =>
-    api.get<{ acts: Act[]; floors: Floor[] }>(`/acts?ressortId=${ressortId}`).then((d) => {
+    api.get<{ acts: Act[] }>(`/acts?ressortId=${ressortId}`).then((d) => {
       setActs(d.acts);
-      setFloors(d.floors ?? []);
     });
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ressortId]);
 
-  const { sections, noSlot } = useMemo(() => {
-    const list = acts ?? [];
-    const byFloor = new Map<string, Act[]>();
-    const ohne: Act[] = [];
-    for (const a of list) {
-      if (a.slot?.floor) {
-        const arr = byFloor.get(a.slot.floor) ?? [];
-        arr.push(a);
-        byFloor.set(a.slot.floor, arr);
-      } else ohne.push(a);
-    }
-    const order = floors.map((f) => f.name);
-    const extra = [...byFloor.keys()].filter((n) => !order.includes(n));
-    const secs = [...order, ...extra]
-      .filter((n) => byFloor.has(n))
-      .map((n) => ({
-        name: n,
-        farbe: floors.find((f) => f.name === n)?.farbe ?? "#8a8172",
-        acts: (byFloor.get(n) ?? []).sort((a, b) => (a.slot?.startMin ?? 0) - (b.slot?.startMin ?? 0)),
-      }));
-    return { sections: secs, noSlot: ohne };
-  }, [acts, floors]);
+  // Ein Floor — flache Liste, sortiert nach Showtime, dann Name.
+  const sortiert = useMemo(
+    () => [...(acts ?? [])].sort((a, b) => (a.showtime || "99:99").localeCompare(b.showtime || "99:99") || a.name.localeCompare(b.name)),
+    [acts],
+  );
 
   return (
     <div className="space-y-4">
@@ -78,47 +44,18 @@ export function Acts({ ressortId }: { ressortId: number }) {
         <Icon name="plus" size={17} /> Act hinzufügen
       </button>
       <p className="px-1 text-xs text-dim">
-        Hier ist die Zentrale: Floor + Showtime eingeben – der Act erscheint automatisch im Line-up. Dazu Get-in, Soundcheck, Gage, Übernachtung & Rider.
+        Pro Act: Zeiten (Load-in, Soundcheck, Showtime), Genre & Herkunft, Gage, Übernachtung & Rider. Die Zeiten erscheinen automatisch in der Anlassübersicht.
       </p>
 
       {acts === null ? (
         <Spinner label="Lade Acts …" />
       ) : acts.length === 0 ? (
-        <EmptyState title="Noch keine Acts" hint="Füge einen Act hinzu – mit Floor und Showtime landet er direkt im Line-up." />
+        <EmptyState title="Noch keine Acts" hint="Füge einen Act hinzu — die Zeiten landen automatisch in der Anlassübersicht." />
       ) : (
-        <div className="space-y-5">
-          {sections.map((s) => (
-            <div key={s.name}>
-              <div className="mb-2 flex items-center gap-2 px-1">
-                <span className="h-3 w-3 rounded-full" style={{ background: s.farbe }} />
-                <span className="text-sm font-bold" style={{ color: s.farbe }}>
-                  {s.name}
-                </span>
-                <span className="text-xs text-dim">
-                  {s.acts.length} {s.acts.length === 1 ? "Act" : "Acts"}
-                </span>
-              </div>
-              <div className="space-y-2.5">
-                {s.acts.map((a) => (
-                  <ActCard key={a.id} act={a} onOpen={() => setModal(a)} />
-                ))}
-              </div>
-            </div>
+        <div className="space-y-2.5">
+          {sortiert.map((a) => (
+            <ActCard key={a.id} act={a} onOpen={() => setModal(a)} />
           ))}
-          {noSlot.length > 0 && (
-            <div>
-              <div className="mb-2 flex items-center gap-2 px-1">
-                <span className="h-3 w-3 rounded-full bg-line2" />
-                <span className="text-sm font-bold text-dim">Noch nicht im Line-up</span>
-                <span className="text-xs text-dim">{noSlot.length}</span>
-              </div>
-              <div className="space-y-2.5">
-                {noSlot.map((a) => (
-                  <ActCard key={a.id} act={a} onOpen={() => setModal(a)} />
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -126,7 +63,6 @@ export function Acts({ ressortId }: { ressortId: number }) {
         <ActModal
           ressortId={ressortId}
           act={modal === "new" ? null : modal}
-          floors={floors}
           onClose={() => setModal(null)}
           onSaved={() => {
             setModal(null);
@@ -151,11 +87,6 @@ function ActCard({ act: a, onOpen }: { act: Act; onOpen: () => void }) {
             <span className="chip bg-surface2 text-dim">{TYP_LABEL[a.typ] ?? a.typ}</span>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-dim">
-            {a.slot && (
-              <span className="inline-flex items-center gap-1 font-medium text-dim">
-                <Icon name="clock" size={13} /> {minToLabel(a.slot.startMin)}–{minToLabel(a.slot.endMin)}
-              </span>
-            )}
             {a.getIn && (
               <span className="inline-flex items-center gap-1">
                 <Icon name="clock" size={13} /> Load-in {a.getIn}
@@ -206,22 +137,17 @@ type LocalFile = { attachmentId: number; filename: string; mime: string; rubrik:
 function ActModal({
   ressortId,
   act,
-  floors,
   onClose,
   onSaved,
 }: {
   ressortId: number;
   act: Act | null;
-  floors: Floor[];
   onClose: () => void;
   onSaved: () => void;
 }) {
   const editing = !!act;
   const [name, setName] = useState(act?.name ?? "");
   const [typ, setTyp] = useState<Act["typ"]>(act?.typ ?? "band");
-  const [floor, setFloor] = useState(act?.slot?.floor ?? (act ? "" : floors[0]?.name ?? ""));
-  const [startMin, setStartMin] = useState(act?.slot?.startMin ?? 4 * 60);
-  const [endMin, setEndMin] = useState(act?.slot?.endMin ?? 5 * 60);
   const [getIn, setGetIn] = useState(act?.getIn ?? "");
   const [soundcheck, setSoundcheck] = useState(act?.soundcheck ?? "");
   const [showtime, setShowtime] = useState(act?.showtime ?? "");
@@ -261,7 +187,6 @@ function ActModal({
 
   const save = async () => {
     if (!name.trim()) return setError("Name erforderlich");
-    if (floor && endMin <= startMin) return setError("Showtime-Ende muss nach dem Start liegen");
     setSaving(true);
     setError("");
     const cents = gage.trim() ? parseChf(gage) : null;
@@ -269,9 +194,6 @@ function ActModal({
       ressortId,
       name: name.trim(),
       typ,
-      floor,
-      startMin,
-      endMin,
       getIn: getIn.trim(),
       soundcheck: soundcheck.trim(),
       showtime: showtime.trim(),
@@ -343,48 +265,6 @@ function ActModal({
             <label className="label">Anzahl Personen</label>
             <input className="input" inputMode="numeric" value={anzahl} onChange={(e) => setAnzahl(e.target.value)} placeholder="z. B. 4" />
           </div>
-        </div>
-
-        {/* Line-up: Floor + Showtime */}
-        <div className=" bg-accent/5 p-3">
-          <p className="lbl mb-2">Line-up</p>
-          <div>
-            <label className="label">Floor</label>
-            <select className="input" value={floor} onChange={(e) => setFloor(e.target.value)}>
-              <option value="">— nicht im Line-up —</option>
-              {floors.map((f) => (
-                <option key={f.name} value={f.name}>
-                  {f.name}
-                </option>
-              ))}
-              {floor && !floors.some((f) => f.name === floor) && <option value={floor}>{floor}</option>}
-            </select>
-          </div>
-          {floor && (
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <div>
-                <label className="label">Showtime von</label>
-                <select className="input" value={startMin} onChange={(e) => setStartMin(Number(e.target.value))}>
-                  {TIME_OPTIONS.map((m) => (
-                    <option key={m} value={m}>
-                      {minToLabel(m)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="label">Showtime bis</label>
-                <select className="input" value={endMin} onChange={(e) => setEndMin(Number(e.target.value))}>
-                  {TIME_OPTIONS.map((m) => (
-                    <option key={m} value={m}>
-                      {minToLabel(m)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-          <p className="mt-2 text-xs text-dim">Mit Floor & Showtime erscheint der Act automatisch im Line-up.</p>
         </div>
 
         <div className="grid grid-cols-3 gap-3">

@@ -85,6 +85,35 @@ export const ressorts = pgTable("ressorts", {
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Abrechnung pro Anlass (digitalisiert das bisherige Excel-Sheet).
+// Beträge in Rappen. Listen (Eintritts-Stufen, Miete, manuelle Gagen) als JSON,
+// da sie nur als Ganzes gelesen/geschrieben werden.
+export const abrechnungen = pgTable("abrechnungen", {
+  id: serial("id").primaryKey(),
+  anlassId: integer("anlassId")
+    .notNull()
+    .unique()
+    .references(() => anlaesse.id, { onDelete: "cascade" }),
+  // Bar unten: Kartenzahlungen werden berechnet (Karten Total − Abendkasse-Karten).
+  barAnfangCents: integer("barAnfangCents"),
+  barEndCents: integer("barEndCents"),
+  // Abendkasse (oben)
+  akAnfangCents: integer("akAnfangCents"),
+  akEndCents: integer("akEndCents"),
+  akKartenCents: integer("akKartenCents"),
+  // SumUp / Twint
+  kartenTotalCents: integer("kartenTotalCents"), // Kartenzahlung Total (Abend & Nacht)
+  twintCents: integer("twintCents"),
+  // Eintritte: [{ preisCents, anzahl }]
+  eintritteVvk: text("eintritteVvk").notNull().default("[]"),
+  eintritteAk: text("eintritteAk").notNull().default("[]"),
+  // Mieteinnahmen: [{ art, preisCents }]
+  miete: text("miete").notNull().default("[]"),
+  // Manuelle Gagen (zusätzlich zu den Acts): [{ funktion, name, preisCents }]
+  gagenManuell: text("gagenManuell").notNull().default("[]"),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Datei-Uploads (Belege, Rider …) – klein gehalten, base64 in der DB.
 export const attachments = pgTable("attachments", {
   id: serial("id").primaryKey(),
