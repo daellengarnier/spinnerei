@@ -64,7 +64,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return s === "" || /^\d{2}:\d{2}$/.test(s) ? s : null;
   };
 
-  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; petzilink: string; art: string; stichwort: string; zugang: string; drivelink: string; abendverantwortungUserId: number | null }> = {};
+  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; petzilink: string; art: string; zugang: string; drivelink: string; abendverantwortungUserId: number | null }> = {};
   if (body?.name !== undefined) {
     const name = String(body.name).trim();
     if (!name) return Response.json({ error: "Name darf nicht leer sein" }, { status: 400 });
@@ -83,8 +83,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
   }
   if (body?.art !== undefined) patch.art = String(body.art).trim();
-  // Stichwort: maximal 3 Wörter (z. B. "Psytrance", "Melodic Techno").
-  if (body?.stichwort !== undefined) patch.stichwort = String(body.stichwort).trim().split(/\s+/).filter(Boolean).slice(0, 3).join(" ");
   if (body?.zugang !== undefined) {
     const zugang = String(body.zugang);
     if (!["", "oeffentlich", "privat"].includes(zugang)) return Response.json({ error: "Zugang: oeffentlich oder privat" }, { status: 400 });

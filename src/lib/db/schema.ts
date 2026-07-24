@@ -39,9 +39,6 @@ export const anlaesse = pgTable("anlaesse", {
   petzilink: text("petzilink").notNull().default(""),
   // Art des Anlasses (Konzert, Party, … — Freitext mit Vorschlägen).
   art: text("art").notNull().default(""),
-  // Stichwort zum Anlass, max. 3 Wörter (z. B. "Psytrance", "Techno") —
-  // v. a. für Partys, wo es keine Acts mit Genre gibt.
-  stichwort: text("stichwort").notNull().default(""),
   // Öffentlicher oder privater Anlass ('oeffentlich' | 'privat', leer = offen).
   zugang: text("zugang").notNull().default(""),
   // Link zum Google-Drive-Ordner des Anlasses.

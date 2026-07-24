@@ -1,0 +1,1 @@
+ALTER TABLE "anlaesse" DROP COLUMN "stichwort";

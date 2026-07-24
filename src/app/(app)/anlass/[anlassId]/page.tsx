@@ -23,7 +23,6 @@ interface Anlass {
   ende: string;
   petzilink: string;
   art: string;
-  stichwort: string;
   zugang: string;
   drivelink: string;
   abendverantwortungUserId: number | null;
@@ -140,7 +139,6 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
     ende: anlass.ende,
     petzilink: anlass.petzilink,
     art: anlass.art,
-    stichwort: anlass.stichwort,
     zugang: anlass.zugang,
     drivelink: anlass.drivelink,
   });
@@ -169,15 +167,10 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
     }
   };
 
-  // Stichwort nur für Anlässe ohne Konzert-Charakter (Party etc.) —
-  // bei (Doppel-)Konzerten kommt das Genre von den Acts.
-  const zeigeStichwort = !werte.art.toLowerCase().includes("konzert");
-  const brauchtStichwort = !!werte.art && zeigeStichwort;
   const fehlend = [
     ...(werte.art ? [] : ["Art des Anlasses"]),
     ...(werte.zugang ? [] : ["Privat/Öffentlich"]),
     ...(avId ? [] : ["Abendverantwortung"]),
-    ...(brauchtStichwort && !werte.stichwort ? ["Stichwort (z. B. Musikrichtung)"] : []),
     ...ZEIT_FELDER.filter((f) => !werte[f.key]).map((f) => f.label),
     ...(werte.petzilink ? [] : ["Petzilink"]),
     ...(werte.drivelink ? [] : ["Drive-Ordner"]),
@@ -243,18 +236,6 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
           ))}
         </select>
       </div>
-
-      {zeigeStichwort && (
-        <div className="mb-2">
-          <label className="label text-xs">Stichwort (max. 3 Wörter, z. B. Psytrance, Techno)</label>
-          <input
-            className="input px-2 py-1.5 text-sm"
-            placeholder="z. B. Psytrance"
-            defaultValue={werte.stichwort}
-            onBlur={(e) => e.target.value.trim() !== werte.stichwort && save("stichwort", e.target.value.trim().split(/\s+/).filter(Boolean).slice(0, 3).join(" "))}
-          />
-        </div>
-      )}
 
       <div className="grid grid-cols-3 gap-2">
         {ZEIT_FELDER.map((f) => (

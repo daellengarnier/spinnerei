@@ -187,11 +187,6 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
         <div className="border-t border-line px-3.5 pb-3.5 pt-2.5">
           {detail ? (
             <>
-              {detail.stichwort && (
-                <div className="flex flex-wrap gap-1.5">
-                  <span className="chip bg-accent/10 text-accent">{detail.stichwort}</span>
-                </div>
-              )}
               {(detail.abendverantwortung || detail.tueroeffnung || detail.essen || detail.ende || detail.petzilink) && (
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-dim">
                   {detail.abendverantwortung && <span className="text-ink">AV: {detail.abendverantwortung}</span>}

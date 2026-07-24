@@ -14,7 +14,6 @@ export interface UebersichtAnlass {
   name: string;
   datum: string;
   art: string;
-  stichwort: string;
   zugang: string;
   tueroeffnung: string;
   essen: string;
@@ -42,7 +41,7 @@ export function icsHerunterladen(anlaesse: UebersichtAnlass[], dateiname = "Spin
   for (const a of anlaesse) {
     const zugangLabel = a.zugang === "privat" ? "Privat" : a.zugang === "oeffentlich" ? "Öffentlich" : "";
     const beschreibung = [
-      [a.art, a.stichwort, zugangLabel].filter(Boolean).join(" · "),
+      [a.art, zugangLabel].filter(Boolean).join(" · "),
       a.essen && `Essen ${a.essen}`,
       ...a.acts.map((x) => `${x.showtime ? x.showtime + " " : ""}${x.name}${x.genre || x.herkunft ? ` (${[x.genre, x.herkunft].filter(Boolean).join(", ")})` : ""}`),
     ]

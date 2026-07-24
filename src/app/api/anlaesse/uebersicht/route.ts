@@ -51,7 +51,6 @@ export async function GET() {
       name: a.name,
       datum: a.datum,
       art: a.art,
-      stichwort: a.stichwort,
       zugang: a.zugang,
       tueroeffnung: a.tueroeffnung,
       essen: a.essen,

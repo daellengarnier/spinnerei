@@ -92,6 +92,13 @@
       "when": 1784930330665,
       "tag": "0012_stale_korvac",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1784930782218,
+      "tag": "0013_sturdy_vision",
+      "breakpoints": true
     }
   ]
 }
