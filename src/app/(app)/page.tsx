@@ -7,7 +7,6 @@ import { EmptyState, Modal, Spinner } from "@/components/Ui";
 import { Icon } from "@/components/Icon";
 import { useAuth } from "@/components/AuthContext";
 import { icsHerunterladen, ticketpreisText, type UebersichtAnlass } from "@/lib/uebersichtExport";
-import { istFolgetag } from "@/lib/uiUtil";
 
 interface AnlassSummary {
   id: number;
@@ -201,12 +200,7 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
                   )}
                   {detail.tueroeffnung && <p>Türöffnung {detail.tueroeffnung}</p>}
                   {detail.essen && <p>Essen {detail.essen}</p>}
-                  {detail.ende && (
-                    <p>
-                      Ende {detail.ende}
-                      {istFolgetag(detail.tueroeffnung, detail.ende) && " (Folgetag)"}
-                    </p>
-                  )}
+                  {detail.ende && <p>Ende {detail.ende}</p>}
                   {detail.petzilink && (
                     <a href={detail.petzilink} target="_blank" rel="noopener noreferrer" className="flex w-fit items-center gap-1 text-accent">
                       <Icon name="send" size={11} /> Petzi
