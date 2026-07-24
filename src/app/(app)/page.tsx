@@ -87,7 +87,9 @@ export default function AnlaesseUebersicht() {
       </div>
 
       <section>
-        <h2 className="block-title mb-2 px-1">Kommende Anlässe</h2>
+        <h2 className="block-title mb-2 px-1">
+          Kommende Anlässe {kommende.length > 0 && <span className="text-sm text-mute">({kommende.length})</span>}
+        </h2>
         {error && <p className="err-box">{error}</p>}
         {!anlaesse ? (
           <Spinner label="Lade Anlässe …" />
