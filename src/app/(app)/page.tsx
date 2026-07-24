@@ -171,7 +171,7 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
             )}
             {detail?.abendverantwortung && (
               <span className="chip mt-1.5 border border-accent/40 bg-accent/10 font-medium text-accent">
-                AV: @{detail.abendverantwortung}
+                AV: {detail.abendverantwortung}
               </span>
             )}
           </div>
