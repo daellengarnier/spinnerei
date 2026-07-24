@@ -164,8 +164,10 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
                 </button>
               )}
             </p>
-            {(detail?.art || zugangLabel) && (
-              <p className="mt-0.5 truncate text-xs text-mute">{[detail?.art, zugangLabel].filter(Boolean).join(" · ")}</p>
+            {(detail?.art || zugangLabel || detail?.abendverantwortung) && (
+              <p className="mt-0.5 truncate text-xs text-mute">
+                {[detail?.art, zugangLabel, detail?.abendverantwortung && `AV: ${detail.abendverantwortung}`].filter(Boolean).join(" · ")}
+              </p>
             )}
           </div>
           {anlass.openTodos > 0 && (

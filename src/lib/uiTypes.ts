@@ -175,7 +175,8 @@ export interface SubRessort {
 
 export interface Todo {
   id: number;
-  ressortId: number;
+  // null = persönliches Todo ohne Anlass/Ressort
+  ressortId: number | null;
   subRessortId: number | null;
   titel: string;
   beschreibung: string;

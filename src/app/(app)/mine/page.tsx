@@ -117,7 +117,8 @@ export default function MinePage() {
   );
 }
 
-// Eigenes Todo erstellen: Anlass + Ressort wählen, wird automatisch mir zugewiesen.
+// Eigenes Todo erstellen: standardmässig persönlich (ohne Anlass); optional
+// kann ein Anlass + Ressort gewählt werden.
 function NeuesTodoModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const { user } = useAuth();
   const [anlaesse, setAnlaesse] = useState<{ id: number; name: string }[] | null>(null);
@@ -133,20 +134,14 @@ function NeuesTodoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
   useEffect(() => {
     api
       .get<{ anlaesse: { id: number; name: string; datum: string }[] }>("/anlaesse")
-      .then((d) => {
-        setAnlaesse(d.anlaesse);
-        // Nächster (erster kommender) Anlass als Vorauswahl.
-        const heute = new Date().toISOString().slice(0, 10);
-        const naechster = d.anlaesse.find((a) => a.datum >= heute) ?? d.anlaesse[0];
-        if (naechster) setAnlassId(naechster.id);
-      })
+      .then((d) => setAnlaesse(d.anlaesse))
       .catch((e) => setError((e as Error).message));
   }, []);
 
   useEffect(() => {
-    if (!anlassId) return;
     setRessorts(null);
     setRessortId(null);
+    if (!anlassId) return;
     api
       .get<{ ressorts: { id: number; name: string }[] }>(`/ressorts?anlass=${anlassId}`)
       .then((d) => {
@@ -158,12 +153,12 @@ function NeuesTodoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
   const save = async () => {
     if (!titel.trim()) return setError("Titel erforderlich");
-    if (!ressortId) return setError("Ressort wählen");
+    if (anlassId && !ressortId) return setError("Ressort wählen");
     setSaving(true);
     setError("");
     try {
       await api.post("/todos", {
-        ressortId,
+        ...(anlassId && ressortId ? { ressortId } : {}),
         titel: titel.trim(),
         beschreibung,
         fristDatum: fristDatum || null,
@@ -200,8 +195,9 @@ function NeuesTodoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="label">Anlass</label>
-            <select className="input" value={anlassId ?? ""} onChange={(e) => setAnlassId(Number(e.target.value))}>
+            <label className="label">Anlass (optional)</label>
+            <select className="input" value={anlassId ?? ""} onChange={(e) => setAnlassId(e.target.value ? Number(e.target.value) : null)}>
+              <option value="">— Keiner —</option>
               {(anlaesse ?? []).map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
@@ -209,16 +205,18 @@ function NeuesTodoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
               ))}
             </select>
           </div>
-          <div>
-            <label className="label">Ressort</label>
-            <select className="input" value={ressortId ?? ""} onChange={(e) => setRessortId(Number(e.target.value))} disabled={!ressorts}>
-              {(ressorts ?? []).map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {anlassId && (
+            <div>
+              <label className="label">Ressort</label>
+              <select className="input" value={ressortId ?? ""} onChange={(e) => setRessortId(Number(e.target.value))} disabled={!ressorts}>
+                {(ressorts ?? []).map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
         <div>
           <label className="label">Frist (optional)</label>
@@ -228,7 +226,10 @@ function NeuesTodoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
           <label className="label">Beschreibung (optional)</label>
           <textarea className="input min-h-[80px] resize-y text-sm" value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} />
         </div>
-        <p className="text-xs text-dim">Das Todo wird dir automatisch zugewiesen und erscheint auch im gewählten Ressort.</p>
+        <p className="text-xs text-dim">
+          Das Todo wird dir automatisch zugewiesen. Ohne Anlass bleibt es persönlich — wählst du einen Anlass, erscheint es auch im gewählten
+          Ressort.
+        </p>
         {error && <p className="err-box">{error}</p>}
       </div>
     </Modal>

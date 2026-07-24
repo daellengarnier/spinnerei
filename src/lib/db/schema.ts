@@ -285,9 +285,8 @@ export const shoppingItems = pgTable("shopping_items", {
 
 export const todos = pgTable("todos", {
   id: serial("id").primaryKey(),
-  ressortId: integer("ressortId")
-    .notNull()
-    .references(() => ressorts.id, { onDelete: "cascade" }),
+  // null = persönliches Todo ohne Anlass/Ressort (aus «Meine Sachen»).
+  ressortId: integer("ressortId").references(() => ressorts.id, { onDelete: "cascade" }),
   subRessortId: integer("subRessortId").references(() => subRessorts.id, {
     onDelete: "set null",
   }),

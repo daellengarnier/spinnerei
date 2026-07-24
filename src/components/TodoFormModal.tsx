@@ -9,7 +9,7 @@ import type { SubRessort, Todo, TodoStatus } from "@/lib/uiTypes";
 interface Props {
   open: boolean;
   onClose: () => void;
-  ressortId: number;
+  ressortId: number | null;
   subRessorts: SubRessort[];
   todo?: Todo | null;
   defaultSubRessortId?: number | null;

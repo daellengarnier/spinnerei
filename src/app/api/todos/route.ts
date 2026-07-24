@@ -11,20 +11,23 @@ export async function POST(request: Request) {
   const auth = await requireUser();
   if (isResponse(auth)) return auth;
   const body = await request.json().catch(() => ({}));
-  const ressortId = Number(body?.ressortId);
+  // Ohne ressortId = persönliches Todo (aus «Meine Sachen»), ohne Anlass-Bezug.
+  const ressortId = body?.ressortId ? Number(body.ressortId) : null;
   const titel = String(body?.titel ?? "").trim();
-  if (!ressortId || !titel) return Response.json({ error: "ressortId und titel erforderlich" }, { status: 400 });
+  if (!titel) return Response.json({ error: "titel erforderlich" }, { status: 400 });
 
   const db = getDb();
-  const ressort = await db.select({ id: ressorts.id }).from(ressorts).where(eq(ressorts.id, ressortId)).limit(1);
-  if (!ressort[0]) return Response.json({ error: "Ressort nicht gefunden" }, { status: 404 });
+  if (ressortId !== null) {
+    const ressort = await db.select({ id: ressorts.id }).from(ressorts).where(eq(ressorts.id, ressortId)).limit(1);
+    if (!ressort[0]) return Response.json({ error: "Ressort nicht gefunden" }, { status: 404 });
+  }
 
   const status: TodoStatus = STATUS.includes(body?.status) ? body.status : "offen";
   const inserted = await db
     .insert(todos)
     .values({
       ressortId,
-      subRessortId: body?.subRessortId ? Number(body.subRessortId) : null,
+      subRessortId: ressortId !== null && body?.subRessortId ? Number(body.subRessortId) : null,
       titel,
       beschreibung: String(body?.beschreibung ?? ""),
       status,

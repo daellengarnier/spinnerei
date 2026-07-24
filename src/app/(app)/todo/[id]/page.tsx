@@ -28,10 +28,11 @@ export default function TodoPage() {
       .get<{ todo: Todo }>(`/todos/${todoId}`)
       .then(({ todo }) => {
         setTodo(todo);
-        api
-          .get<{ subRessorts: SubRessort[] }>(`/ressorts/${todo.ressortId}`)
-          .then((d) => setSubRessorts(d.subRessorts))
-          .catch(() => undefined);
+        if (todo.ressortId)
+          api
+            .get<{ subRessorts: SubRessort[] }>(`/ressorts/${todo.ressortId}`)
+            .then((d) => setSubRessorts(d.subRessorts))
+            .catch(() => undefined);
       })
       .catch((e) => setError((e as Error).message));
 
