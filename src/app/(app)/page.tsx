@@ -6,7 +6,7 @@ import { api } from "@/lib/apiClient";
 import { EmptyState, Modal, Spinner } from "@/components/Ui";
 import { Icon } from "@/components/Icon";
 import { useAuth } from "@/components/AuthContext";
-import { SaisonUebersicht } from "@/components/SaisonUebersicht";
+import { icsHerunterladen, pdfHerunterladen, type UebersichtAnlass } from "@/lib/uebersichtExport";
 import { formatDate } from "@/lib/uiUtil";
 
 interface AnlassSummary {
@@ -45,7 +45,7 @@ export default function AnlaesseUebersicht() {
   const [error, setError] = useState("");
   const [hi, setHi] = useState("Hallo");
   const [createOpen, setCreateOpen] = useState(false);
-  const [uebersichtOpen, setUebersichtOpen] = useState(false);
+  const [exportBusy, setExportBusy] = useState<"" | "pdf" | "ics">("");
 
   const load = () =>
     api
@@ -58,6 +58,19 @@ export default function AnlaesseUebersicht() {
     load();
   }, []);
 
+  const exportieren = async (was: "pdf" | "ics") => {
+    setExportBusy(was);
+    try {
+      const d = await api.get<{ anlaesse: UebersichtAnlass[] }>("/anlaesse/uebersicht");
+      if (was === "pdf") await pdfHerunterladen(d.anlaesse);
+      else icsHerunterladen(d.anlaesse);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setExportBusy("");
+    }
+  };
+
   const kommende = (anlaesse ?? []).filter((a) => !istVorbei(a.datum));
   const vergangene = (anlaesse ?? []).filter((a) => istVorbei(a.datum)).reverse();
 
@@ -67,27 +80,23 @@ export default function AnlaesseUebersicht() {
         <h1 className="page-title">
           {hi}, <span className="brand-text">{user?.name}</span>
         </h1>
-        <div className="mt-3 flex gap-2">
-          <button className={`flex-1 py-1.5 text-sm ${uebersichtOpen ? "btn-primary" : "btn-ghost"}`} onClick={() => setUebersichtOpen((o) => !o)}>
-            <Icon name="tasks" size={15} /> Übersicht
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button className="btn-ghost py-1.5 text-sm" onClick={() => exportieren("pdf")} disabled={exportBusy !== ""}>
+            <Icon name="download" size={15} /> {exportBusy === "pdf" ? "Erstelle PDF …" : "Übersicht herunterladen"}
           </button>
-          <a href="https://spinnplan-23.netlify.app" target="_blank" rel="noopener noreferrer" className="btn-ghost flex-1 py-1.5 text-sm">
-            <Icon name="calendar" size={15} /> Spinnplan
+          <button className="btn-ghost py-1.5 text-sm" onClick={() => exportieren("ics")} disabled={exportBusy !== ""}>
+            <Icon name="calendar" size={15} /> {exportBusy === "ics" ? "Erstelle Datei …" : "In Kalender übertragen"}
+          </button>
+          <a href="https://spinnplan-23.netlify.app" target="_blank" rel="noopener noreferrer" className="btn-ghost py-1.5 text-sm">
+            <Icon name="external" size={15} /> Spinnplan
           </a>
           {user?.rolle === "admin" && (
-            <button className="btn-ghost flex-1 py-1.5 text-sm" onClick={() => setCreateOpen(true)}>
+            <button className="btn-ghost py-1.5 text-sm" onClick={() => setCreateOpen(true)}>
               <Icon name="plus" size={15} /> Anlass
             </button>
           )}
         </div>
       </div>
-
-      {uebersichtOpen && (
-        <section>
-          <h2 className="lbl mb-2 px-1">Übersicht alle Anlässe</h2>
-          <SaisonUebersicht />
-        </section>
-      )}
 
       <section>
         <h2 className="lbl mb-2 px-1">Kommende Anlässe</h2>
