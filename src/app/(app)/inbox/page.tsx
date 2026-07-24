@@ -19,6 +19,7 @@ function targetPath(it: ActivityItem): string {
   if (it.refTyp === "todo") return `/todo/${it.refId}`;
   if (it.refTyp === "ressort") return `/ressort/${it.refId}?tab=pinnwand`;
   if (it.refTyp === "meeting") return `/meetings/${it.refId}`;
+  if (it.refTyp === "anlass") return `/anlass/${it.refId}`;
   return "/";
 }
 

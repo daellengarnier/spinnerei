@@ -35,6 +35,10 @@ services:
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
       DATABASE_URL: postgres://${POSTGRES_USER:-spinnerei}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-spinnerei}
+      # Web-Push (VAPID); leer = Push deaktiviert. Werte in /opt/spinnerei/.env.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
     depends_on:
       db:
         condition: service_healthy

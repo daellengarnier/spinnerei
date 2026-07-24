@@ -21,7 +21,7 @@ export type Rolle = "admin" | "mitglied";
 export type TodoStatus = "offen" | "in_arbeit" | "erledigt";
 export type Verfuegbarkeit = "ja" | "vielleicht" | "nein";
 export type MeetingStatus = "umfrage_laeuft" | "terminFixiert" | "erledigt";
-export type ActivityTyp = "mention" | "zuweisung" | "neuer_kommentar" | "sitzung";
+export type ActivityTyp = "mention" | "zuweisung" | "neuer_kommentar" | "sitzung" | "neuer_anlass" | "av_check";
 export type ParentTyp = "todo" | "ressort";
 
 // Ein Anlass = ein Event in der Spinnerei (Hausfest, Konzert, Kinderdisco, …).

@@ -2,6 +2,8 @@ import { asc, count, eq, and, ne } from "drizzle-orm";
 import { requireUser, requireAdmin, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
 import { anlaesse, ressorts, todos } from "@/lib/db/schema";
+import { allUsers, notifyMany } from "@/lib/notify";
+import { formatDatumKurz } from "@/lib/datum";
 
 // Alle Anlässe, chronologisch, mit Anzahl offener Todos.
 export async function GET() {
@@ -53,5 +55,18 @@ export async function POST(request: Request) {
     slug = `${slugBase}-${i}`;
   }
   const inserted = await db.insert(anlaesse).values({ slug, name, datum }).returning({ id: anlaesse.id });
+
+  // Alle Mitglieder benachrichtigen (Inbox + Push).
+  const alle = await allUsers();
+  await notifyMany(
+    alle.map((u) => ({
+      userId: u.id,
+      actorUserId: auth.id,
+      typ: "neuer_anlass" as const,
+      text: `Neuer Anlass: ${name} am ${formatDatumKurz(datum)}`,
+      refTyp: "anlass",
+      refId: inserted[0].id,
+    })),
+  );
   return Response.json({ id: inserted[0].id, slug }, { status: 201 });
 }

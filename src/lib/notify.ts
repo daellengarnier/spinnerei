@@ -11,12 +11,15 @@ const PUSH_TITLE: Record<ActivityTyp, string> = {
   zuweisung: "Neues Todo für dich",
   neuer_kommentar: "Neuer Kommentar",
   sitzung: "Sitzung",
+  neuer_anlass: "Neuer Anlass",
+  av_check: "Abendverantwortung",
 };
 
 function refUrl(refTyp: string, refId: number): string {
   if (refTyp === "todo") return `/todo/${refId}`;
   if (refTyp === "ressort") return `/ressort/${refId}?tab=pinnwand`;
   if (refTyp === "meeting" || refTyp === "sitzung") return `/meetings/${refId}`;
+  if (refTyp === "anlass") return `/anlass/${refId}`;
   return "/inbox";
 }
 
