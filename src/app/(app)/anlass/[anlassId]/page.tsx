@@ -24,6 +24,7 @@ interface Anlass {
   art: string;
   stichwort: string;
   zugang: string;
+  drivelink: string;
 }
 
 interface AnlassAct {
@@ -139,6 +140,7 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
     art: anlass.art,
     stichwort: anlass.stichwort,
     zugang: anlass.zugang,
+    drivelink: anlass.drivelink,
   });
   const [error, setError] = useState("");
 
@@ -160,6 +162,7 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
     ...(brauchtStichwort && !werte.stichwort ? ["Stichwort (z. B. Musikrichtung)"] : []),
     ...ZEIT_FELDER.filter((f) => !werte[f.key]).map((f) => f.label),
     ...(werte.petzilink ? [] : ["Petzilink"]),
+    ...(werte.drivelink ? [] : ["Drive-Ordner"]),
   ];
   const sortierteActs = [...acts].sort((a, b) => (a.showtime || "99:99").localeCompare(b.showtime || "99:99"));
 
@@ -251,6 +254,24 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
         </div>
         {werte.petzilink && (
           <a href={werte.petzilink} target="_blank" rel="noopener noreferrer" className="btn-ghost shrink-0 px-3 py-1.5 text-sm">
+            Öffnen
+          </a>
+        )}
+      </div>
+
+      <div className="mt-2 flex items-end gap-2">
+        <div className="min-w-0 flex-1">
+          <label className="label text-xs">Drive-Ordner (Rider, Plakate, Dokumente)</label>
+          <input
+            type="url"
+            className="input px-2 py-1.5 text-sm"
+            placeholder="https://drive.google.com/…"
+            defaultValue={werte.drivelink}
+            onBlur={(e) => e.target.value.trim() !== werte.drivelink && save("drivelink", e.target.value.trim())}
+          />
+        </div>
+        {werte.drivelink && (
+          <a href={werte.drivelink} target="_blank" rel="noopener noreferrer" className="btn-ghost shrink-0 px-3 py-1.5 text-sm">
             Öffnen
           </a>
         )}

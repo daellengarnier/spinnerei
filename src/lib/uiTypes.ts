@@ -115,6 +115,7 @@ export interface Act {
   uebernachtung: boolean;
   anzahlPersonen: number | null;
   driver: boolean;
+  drivelink: string;
   promotext: string;
   notiz: string;
   getIn: string; // Load-in

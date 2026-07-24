@@ -44,6 +44,8 @@ export const anlaesse = pgTable("anlaesse", {
   stichwort: text("stichwort").notNull().default(""),
   // Öffentlicher oder privater Anlass ('oeffentlich' | 'privat', leer = offen).
   zugang: text("zugang").notNull().default(""),
+  // Link zum Google-Drive-Ordner des Anlasses.
+  drivelink: text("drivelink").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -216,6 +218,8 @@ export const acts = pgTable("acts", {
   anzahlPersonen: integer("anzahlPersonen"),
   // Band tourt mit eigenem Driver (zählt oft zusätzlich zur Bandgrösse).
   driver: boolean("driver").notNull().default(false),
+  // Link zum Drive-Ordner des Acts (Tech-/Hospitality-Rider etc. liegen im Drive).
+  drivelink: text("drivelink").notNull().default(""),
   promotext: text("promotext").notNull().default(""),
   notiz: text("notiz").notNull().default(""),
   // Zeiten am Act als 'HH:MM' (getIn = Load-in). Erscheinen in der Anlassübersicht.

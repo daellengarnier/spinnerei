@@ -54,7 +54,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return s === "" || /^\d{2}:\d{2}$/.test(s) ? s : null;
   };
 
-  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; petzilink: string; art: string; stichwort: string; zugang: string }> = {};
+  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; petzilink: string; art: string; stichwort: string; zugang: string; drivelink: string }> = {};
   if (body?.name !== undefined) {
     const name = String(body.name).trim();
     if (!name) return Response.json({ error: "Name darf nicht leer sein" }, { status: 400 });
@@ -84,6 +84,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const link = String(body.petzilink).trim();
     if (link && !/^https?:\/\//.test(link)) return Response.json({ error: "Petzilink muss mit http(s):// beginnen" }, { status: 400 });
     patch.petzilink = link;
+  }
+  if (body?.drivelink !== undefined) {
+    const link = String(body.drivelink).trim();
+    if (link && !/^https?:\/\//.test(link)) return Response.json({ error: "Drive-Link muss mit http(s):// beginnen" }, { status: 400 });
+    patch.drivelink = link;
   }
   if (Object.keys(patch).length === 0) return Response.json({ error: "Nichts zu ändern" }, { status: 400 });
   await getDb().update(anlaesse).set(patch).where(eq(anlaesse.id, id));

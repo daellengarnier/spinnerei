@@ -39,6 +39,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   if (body?.uebernachtung !== undefined) patch.uebernachtung = !!body.uebernachtung;
   if (body?.anzahlPersonen !== undefined) patch.anzahlPersonen = toCount(body.anzahlPersonen);
   if (body?.driver !== undefined) patch.driver = !!body.driver;
+  if (body?.drivelink !== undefined) patch.drivelink = String(body.drivelink ?? "").trim();
   if (body?.promotext !== undefined) patch.promotext = String(body.promotext ?? "").trim();
   if (body?.notiz !== undefined) patch.notiz = String(body.notiz ?? "").trim();
   if (body?.getIn !== undefined) patch.getIn = String(body.getIn ?? "").trim();

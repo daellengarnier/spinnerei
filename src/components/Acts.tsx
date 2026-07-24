@@ -1,18 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/apiClient";
 import { EmptyState, Modal, Spinner } from "./Ui";
 import { Icon } from "./Icon";
 import { formatChf } from "@/lib/finance";
-import type { Act, ActFile, ActRubrik, Attachment } from "@/lib/uiTypes";
+import type { Act } from "@/lib/uiTypes";
 
 const TYP_LABEL: Record<string, string> = { band: "Band", dj: "DJ", andere: "Andere" };
-const RUBRIKEN: { key: ActRubrik; label: string }[] = [
-  { key: "techrider", label: "Techrider" },
-  { key: "hospitality", label: "Hospitality-Rider" },
-  { key: "sonstiges", label: "Weitere Dateien" },
-];
 
 function parseChf(s: string): number {
   const v = parseFloat(String(s).replace(",", ".").replace(/[^0-9.]/g, ""));
@@ -121,9 +116,9 @@ function ActCard({ act: a, onOpen }: { act: Act; onOpen: () => void }) {
                 <Icon name="bed" size={14} /> Übernachtung
               </span>
             )}
-            {a.files.length > 0 && (
+            {a.drivelink && (
               <span className="inline-flex items-center gap-1">
-                <Icon name="file" size={13} /> {a.files.length}
+                <Icon name="file" size={13} /> Drive
               </span>
             )}
           </div>
@@ -133,8 +128,6 @@ function ActCard({ act: a, onOpen }: { act: Act; onOpen: () => void }) {
     </button>
   );
 }
-
-type LocalFile = { attachmentId: number; filename: string; mime: string; rubrik: ActRubrik };
 
 function ActModal({
   ressortId,
@@ -161,32 +154,9 @@ function ActModal({
   const [uebernachtung, setUebernachtung] = useState(act?.uebernachtung ?? false);
   const [promotext, setPromotext] = useState(act?.promotext ?? "");
   const [notiz, setNotiz] = useState(act?.notiz ?? "");
-  const [files, setFiles] = useState<LocalFile[]>(
-    (act?.files ?? []).map((f: ActFile) => ({ attachmentId: f.attachmentId, filename: f.filename, mime: f.mime, rubrik: f.rubrik })),
-  );
-  const [uploading, setUploading] = useState<ActRubrik | null>(null);
+  const [drivelink, setDrivelink] = useState(act?.drivelink ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const fileRefs = { techrider: useRef<HTMLInputElement>(null), hospitality: useRef<HTMLInputElement>(null), sonstiges: useRef<HTMLInputElement>(null) };
-
-  const onFile = async (f: File, rubrik: ActRubrik) => {
-    setUploading(rubrik);
-    setError("");
-    try {
-      const fd = new FormData();
-      fd.append("file", f);
-      const res = await fetch("/api/attachments", { method: "POST", body: fd, credentials: "include" });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Upload fehlgeschlagen");
-      const { attachment } = (await res.json()) as { attachment: Attachment };
-      setFiles((prev) => [...prev, { attachmentId: attachment.id, filename: attachment.filename, mime: attachment.mime, rubrik }]);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setUploading(null);
-      const ref = fileRefs[rubrik].current;
-      if (ref) ref.value = "";
-    }
-  };
 
   const save = async () => {
     if (!name.trim()) return setError("Name erforderlich");
@@ -208,14 +178,13 @@ function ActModal({
       uebernachtung,
       promotext: promotext.trim(),
       notiz: notiz.trim(),
-      files: files.map((f) => ({ attachmentId: f.attachmentId, rubrik: f.rubrik })),
+      drivelink: drivelink.trim(),
     };
     try {
       if (editing) {
         await api.patch(`/acts/${act!.id}`, payload);
       } else {
-        const { id } = await api.post<{ id: number }>("/acts", payload);
-        if (payload.files.length > 0) await api.patch(`/acts/${id}`, { files: payload.files });
+        await api.post("/acts", payload);
       }
       onSaved();
     } catch (e) {
@@ -245,7 +214,7 @@ function ActModal({
           <button className="btn-ghost flex-1" onClick={onClose}>
             Abbrechen
           </button>
-          <button className="btn-primary flex-1" onClick={save} disabled={saving || !!uploading}>
+          <button className="btn-primary flex-1" onClick={save} disabled={saving}>
             Speichern
           </button>
         </div>
@@ -323,37 +292,24 @@ function ActModal({
           <textarea className="input min-h-[50px] resize-y" value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder="Kontakt, Absprachen, Sonstiges …" />
         </div>
 
-        {RUBRIKEN.map((r) => {
-          const list = files.filter((f) => f.rubrik === r.key);
-          return (
-            <div key={r.key}>
-              <label className="label">{r.label}</label>
-              <input
-                ref={fileRefs[r.key]}
-                type="file"
-                accept="image/*,application/pdf,.doc,.docx,.txt"
-                className="hidden"
-                onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0], r.key)}
-              />
-              <div className="space-y-1.5">
-                {list.map((f) => (
-                  <div key={f.attachmentId} className="flex items-center gap-2  border border-line bg-surface2 px-3 py-2 text-sm">
-                    <Icon name="file" size={15} className="text-accent" />
-                    <a href={`/api/attachments/${f.attachmentId}`} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1 truncate font-medium text-accent-dark">
-                      {f.filename}
-                    </a>
-                    <button className="text-dim hover:text-red-500" onClick={() => setFiles((prev) => prev.filter((x) => x.attachmentId !== f.attachmentId))} aria-label="Entfernen">
-                      <Icon name="close" size={15} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <button className="btn-ghost mt-1.5 w-full py-2 text-sm" onClick={() => fileRefs[r.key].current?.click()} disabled={!!uploading}>
-                <Icon name="download" size={16} className="rotate-180" /> {uploading === r.key ? "Lädt …" : `${r.label} hochladen`}
-              </button>
-            </div>
-          );
-        })}
+        <div>
+          <label className="label">Drive-Link (Tech-/Hospitality-Rider, Dokumente)</label>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              className="input min-w-0 flex-1"
+              placeholder="https://drive.google.com/…"
+              value={drivelink}
+              onChange={(e) => setDrivelink(e.target.value)}
+            />
+            {drivelink.trim() && (
+              <a href={drivelink.trim()} target="_blank" rel="noopener noreferrer" className="btn-ghost shrink-0 px-3 text-sm">
+                Öffnen
+              </a>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-dim">Rider & Dokumente liegen im Drive-Ordner des Anlasses — hier den Link zum Unterordner des Acts einfügen.</p>
+        </div>
 
         {error && <p className=" bg-terra-light px-3 py-2 text-sm text-terra-dark">{error}</p>}
       </div>
