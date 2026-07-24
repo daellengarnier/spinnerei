@@ -41,6 +41,9 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   if (body?.notiz !== undefined) patch.notiz = String(body.notiz ?? "").trim();
   if (body?.getIn !== undefined) patch.getIn = String(body.getIn ?? "").trim();
   if (body?.soundcheck !== undefined) patch.soundcheck = String(body.soundcheck ?? "").trim();
+  if (body?.showtime !== undefined) patch.showtime = String(body.showtime ?? "").trim();
+  if (body?.genre !== undefined) patch.genre = String(body.genre ?? "").trim();
+  if (body?.herkunft !== undefined) patch.herkunft = String(body.herkunft ?? "").trim();
   if (Object.keys(patch).length > 0) await db.update(acts).set(patch).where(eq(acts.id, actId));
 
   // Dateien ersetzen, falls mitgeschickt: [{ attachmentId, rubrik }]

@@ -116,8 +116,11 @@ export interface Act {
   anzahlPersonen: number | null;
   promotext: string;
   notiz: string;
-  getIn: string;
+  getIn: string; // Load-in
   soundcheck: string;
+  showtime: string;
+  genre: string;
+  herkunft: string;
   createdAt: string;
   createdByName: string | null;
   files: ActFile[];

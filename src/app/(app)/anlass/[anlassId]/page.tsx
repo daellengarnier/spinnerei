@@ -17,6 +17,20 @@ interface Anlass {
   slug: string;
   name: string;
   datum: string;
+  tueroeffnung: string;
+  essen: string;
+  ende: string;
+  petzilink: string;
+}
+
+interface AnlassAct {
+  id: number;
+  ressortId: number;
+  name: string;
+  typ: string;
+  getIn: string;
+  soundcheck: string;
+  showtime: string;
 }
 
 export default function AnlassDashboard() {
@@ -24,12 +38,19 @@ export default function AnlassDashboard() {
   const anlassId = Number(params.anlassId);
   const { user } = useAuth();
   const [anlass, setAnlass] = useState<Anlass | null>(null);
+  const [acts, setActs] = useState<AnlassAct[]>([]);
   const [ressorts, setRessorts] = useState<RessortSummary[] | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!anlassId) return;
-    api.get<{ anlass: Anlass }>(`/anlaesse/${anlassId}`).then((d) => setAnlass(d.anlass)).catch((e) => setError((e as Error).message));
+    api
+      .get<{ anlass: Anlass; acts: AnlassAct[] }>(`/anlaesse/${anlassId}`)
+      .then((d) => {
+        setAnlass(d.anlass);
+        setActs(d.acts);
+      })
+      .catch((e) => setError((e as Error).message));
     api
       .get<{ ressorts: RessortSummary[] }>(`/ressorts?anlass=${anlassId}`)
       .then((d) => setRessorts(d.ressorts))
@@ -49,21 +70,7 @@ export default function AnlassDashboard() {
         <p className="mt-0.5 text-sm text-mute">{formatDate(anlass.datum)}</p>
       </div>
 
-      {/* Schnellzugriff: Sitzungen & Einkauf des Anlasses */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <Link href={`/anlass/${anlass.id}/meetings`} className="card flex items-center gap-3 p-3.5 active:scale-[0.99]">
-          <span className="quick-icon">
-            <Icon name="calendar" size={19} />
-          </span>
-          <span className="font-semibold text-ink">Sitzungen</span>
-        </Link>
-        <Link href={`/anlass/${anlass.id}/einkauf`} className="card flex items-center gap-3 p-3.5 active:scale-[0.99]">
-          <span className="quick-icon">
-            <Icon name="cart" size={19} />
-          </span>
-          <span className="font-semibold text-ink">Einkauf</span>
-        </Link>
-      </div>
+      <Uebersicht anlass={anlass} acts={acts} onSaved={(a) => setAnlass(a)} />
 
       <div>
         <h2 className="lbl mb-2 px-1">Ressorts</h2>
@@ -109,5 +116,109 @@ export default function AnlassDashboard() {
         )}
       </div>
     </div>
+  );
+}
+
+const ZEIT_FELDER = [
+  { key: "tueroeffnung", label: "Türöffnung" },
+  { key: "essen", label: "Essen" },
+  { key: "ende", label: "Ende Anlass" },
+] as const;
+
+// Anlassübersicht: Eckzeiten & Petzilink (editierbar, optional — mit Reminder
+// bei fehlenden Angaben) + Act-Zeiten aus dem Acts-Ressort.
+function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct[]; onSaved: (a: Anlass) => void }) {
+  const [werte, setWerte] = useState({
+    tueroeffnung: anlass.tueroeffnung,
+    essen: anlass.essen,
+    ende: anlass.ende,
+    petzilink: anlass.petzilink,
+  });
+  const [error, setError] = useState("");
+
+  const save = async (key: keyof typeof werte, wert: string) => {
+    setWerte((w) => ({ ...w, [key]: wert }));
+    setError("");
+    try {
+      await api.patch(`/anlaesse/${anlass.id}`, { [key]: wert });
+      onSaved({ ...anlass, ...werte, [key]: wert });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const fehlend = [
+    ...ZEIT_FELDER.filter((f) => !werte[f.key]).map((f) => f.label),
+    ...(werte.petzilink ? [] : ["Petzilink"]),
+  ];
+  const sortierteActs = [...acts].sort((a, b) => (a.showtime || "99:99").localeCompare(b.showtime || "99:99"));
+
+  return (
+    <section className="card p-3.5">
+      <h2 className="lbl mb-2.5">Anlassübersicht</h2>
+
+      {fehlend.length > 0 && (
+        <p className="mb-2.5 border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-xs text-accent">
+          Noch offen: {fehlend.join(", ")} — bitte ausfüllen, sobald bekannt.
+        </p>
+      )}
+
+      <div className="grid grid-cols-3 gap-2">
+        {ZEIT_FELDER.map((f) => (
+          <div key={f.key}>
+            <label className="label text-xs">{f.label}</label>
+            <input
+              type="time"
+              className="input px-2 py-1.5 text-sm"
+              value={werte[f.key]}
+              onChange={(e) => save(f.key, e.target.value)}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-2 flex items-end gap-2">
+        <div className="min-w-0 flex-1">
+          <label className="label text-xs">Petzilink (Ticketing)</label>
+          <input
+            type="url"
+            className="input px-2 py-1.5 text-sm"
+            placeholder="https://…"
+            defaultValue={werte.petzilink}
+            onBlur={(e) => e.target.value.trim() !== werte.petzilink && save("petzilink", e.target.value.trim())}
+          />
+        </div>
+        {werte.petzilink && (
+          <a href={werte.petzilink} target="_blank" rel="noopener noreferrer" className="btn-ghost shrink-0 px-3 py-1.5 text-sm">
+            Öffnen
+          </a>
+        )}
+      </div>
+      {error && <p className="err-box mt-2">{error}</p>}
+
+      {sortierteActs.length > 0 && (
+        <div className="mt-3 border-t border-line pt-2.5">
+          <div className="space-y-1.5">
+            {sortierteActs.map((a) => (
+              <Link key={a.id} href={`/ressort/${a.ressortId}`} className="row-hover flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-1 py-1">
+                <span className="min-w-0 flex-1 truncate font-semibold text-ink">
+                  {a.showtime && <span className="brand-text mr-2 tabular-nums">{a.showtime}</span>}
+                  {a.name || "Unbenannter Act"}
+                </span>
+                <span className="flex shrink-0 gap-3 text-xs text-mute">
+                  {a.getIn && <span>Load-in {a.getIn}</span>}
+                  {a.soundcheck && <span>SC {a.soundcheck}</span>}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+      {sortierteActs.length === 0 && (
+        <p className="mt-3 border-t border-line pt-2.5 text-xs text-mute">
+          Sobald im Ressort «Acts» Acts mit Zeiten (Load-in, Soundcheck, Showtime) erfasst sind, erscheinen sie hier automatisch.
+        </p>
+      )}
+    </section>
   );
 }

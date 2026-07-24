@@ -81,15 +81,18 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
 }
 
 export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdmin();
+  const body = await request.json().catch(() => ({}));
+  // Verantwortliche (leadUserIds) dürfen alle Mitglieder setzen;
+  // alles andere (Name, Farbe, …) bleibt Admin-Sache.
+  const nurLeads =
+    body?.name === undefined && body?.beschreibung === undefined && body?.farbe === undefined && body?.reihenfolge === undefined;
+  const auth = nurLeads ? await requireUser() : await requireAdmin();
   if (isResponse(auth)) return auth;
   const { id } = await ctx.params;
   const ressortId = Number(id);
   const db = getDb();
   const existing = await db.select({ id: ressorts.id }).from(ressorts).where(eq(ressorts.id, ressortId)).limit(1);
   if (!existing[0]) return Response.json({ error: "Ressort nicht gefunden" }, { status: 404 });
-
-  const body = await request.json().catch(() => ({}));
   const patch: Partial<typeof ressorts.$inferInsert> = {};
   if (body?.name !== undefined) patch.name = String(body.name).trim();
   if (body?.beschreibung !== undefined) patch.beschreibung = String(body.beschreibung);

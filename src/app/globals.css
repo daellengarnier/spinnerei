@@ -129,15 +129,15 @@ body {
   .btn-primary:hover {
     background: #ddd;
   }
-  /* Ghost: transparent mit Linie (Spinnplan .btn). */
+  /* Ghost: weiss umrandet auf transparent — gut sichtbar auf dunklem Grund. */
   .btn-ghost {
-    color: var(--color-dim);
+    color: var(--color-ink);
     background: transparent;
-    border: 1px solid var(--color-line2);
+    border: 1px solid var(--color-ink);
   }
   .btn-ghost:hover {
-    border-color: var(--color-ink);
-    color: var(--color-ink);
+    background: var(--color-ink);
+    color: #000;
   }
   .btn-danger {
     color: var(--color-terra);

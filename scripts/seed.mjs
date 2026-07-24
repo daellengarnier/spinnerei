@@ -10,37 +10,48 @@ if (!url) {
   process.exit(1);
 }
 
-// Volle Struktur fürs Hausfest (aus der hausfest26-App, ohne Programmübersicht/
-// Zeitplan — die Programm-Übersicht gibt es in der Spinnerei-App nicht).
-const HAUSFEST_RESSORTS = [
+// Einheitliche Ressort-Struktur für jeden Anlass.
+const STANDARD_RESSORTS = [
   { name: "Acts", farbe: "#d6409f", acts: true, subs: [] },
+  { name: "Bar", farbe: "#06b6d4", subs: [] },
   { name: "Essen", farbe: "#f97316", subs: [] },
-  { name: "Getränke", farbe: "#06b6d4", subs: [] },
-  { name: "Technik", farbe: "#64748b", subs: [] },
+  { name: "Licht & Ton", farbe: "#64748b", subs: [] },
   { name: "Promo", farbe: "#eab308", subs: [] },
-  { name: "Deko", farbe: "#22c55e", subs: [] },
-  { name: "Sicherheit & Awareness", farbe: "#ef4444", subs: [] },
+  { name: "Sicherheit", farbe: "#ef4444", subs: [] },
   { name: "Finanzen", farbe: "#8b5cf6", finanzen: true, subs: [] },
 ];
 
-// Schlankes Standard-Set für alle übrigen Anlässe (Konzerte etc.).
-const STANDARD_RESSORTS = [
-  { name: "Allgemein", farbe: "#c9a84c", subs: [] },
-  { name: "Acts", farbe: "#d6409f", acts: true, subs: [] },
-  { name: "Bar", farbe: "#06b6d4", subs: [] },
-  { name: "Technik", farbe: "#64748b", subs: [] },
-  { name: "Finanzen", farbe: "#8b5cf6", finanzen: true, subs: [] },
+// Kollektiv-Mitglieder als vorbelegte Profile (claimed=false). Beim
+// Registrieren mit exakt diesem Namen übernimmt die Person ihr Profil.
+// Bis dahin sind sie bereits als Verantwortliche/Zuständige wählbar.
+const KOLLEKTIV = [
+  { name: "Ambar", farbe: "#e0685c" },
+  { name: "Dällen", farbe: "#c9a84c" },
+  { name: "Mike", farbe: "#7a9fe8" },
+  { name: "Nina", farbe: "#b06cc4" },
+  { name: "Alvi", farbe: "#6fcf7a" },
+  { name: "Yves", farbe: "#e8a13c" },
+  { name: "Laurin", farbe: "#5cc4c4" },
 ];
 
 const sql = postgres(url, { max: 1, prepare: false });
 
 try {
+  for (const person of KOLLEKTIV) {
+    const existing = await sql`SELECT id FROM users WHERE name = ${person.name} LIMIT 1`;
+    if (existing[0]) continue;
+    await sql`
+      INSERT INTO users (name, email, "passwordHash", rolle, "avatarColor", claimed, active)
+      VALUES (${person.name}, ${`${person.name.toLowerCase()}@platzhalter.local`}, ${""}, 'mitglied', ${person.farbe}, false, true)`;
+    console.log(`[seed] Profil für ${person.name} vorbereitet.`);
+  }
+
   const anlaesse = await sql`SELECT id, slug, name FROM anlaesse ORDER BY datum`;
   for (const anlass of anlaesse) {
     const existing = await sql`SELECT COUNT(*)::int AS c FROM ressorts WHERE "anlassId" = ${anlass.id}`;
     if (existing[0].c > 0) continue;
 
-    const ressorts = anlass.slug === "hausfest" ? HAUSFEST_RESSORTS : STANDARD_RESSORTS;
+    const ressorts = STANDARD_RESSORTS;
     await sql.begin(async (tx) => {
       let order = 1;
       for (const r of ressorts) {

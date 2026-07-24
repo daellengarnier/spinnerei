@@ -158,7 +158,7 @@ function ActCard({ act: a, onOpen }: { act: Act; onOpen: () => void }) {
             )}
             {a.getIn && (
               <span className="inline-flex items-center gap-1">
-                <Icon name="clock" size={13} /> Get-in {a.getIn}
+                <Icon name="clock" size={13} /> Load-in {a.getIn}
               </span>
             )}
             {a.soundcheck && (
@@ -166,6 +166,13 @@ function ActCard({ act: a, onOpen }: { act: Act; onOpen: () => void }) {
                 <Icon name="tools" size={13} /> SC {a.soundcheck}
               </span>
             )}
+            {a.showtime && (
+              <span className="inline-flex items-center gap-1 font-medium text-dim">
+                <Icon name="clock" size={13} /> Show {a.showtime}
+              </span>
+            )}
+            {a.genre && <span>{a.genre}</span>}
+            {a.herkunft && <span>aus {a.herkunft}</span>}
             {a.kostenCents != null && (
               <span className="inline-flex items-center gap-1 font-medium text-dim">
                 <Icon name="coins" size={13} /> CHF {formatChf(a.kostenCents)}
@@ -217,6 +224,9 @@ function ActModal({
   const [endMin, setEndMin] = useState(act?.slot?.endMin ?? 5 * 60);
   const [getIn, setGetIn] = useState(act?.getIn ?? "");
   const [soundcheck, setSoundcheck] = useState(act?.soundcheck ?? "");
+  const [showtime, setShowtime] = useState(act?.showtime ?? "");
+  const [genre, setGenre] = useState(act?.genre ?? "");
+  const [herkunft, setHerkunft] = useState(act?.herkunft ?? "");
   const [gage, setGage] = useState(act?.kostenCents != null ? (act.kostenCents / 100).toFixed(2) : "");
   const [anzahl, setAnzahl] = useState(act?.anzahlPersonen != null ? String(act.anzahlPersonen) : "");
   const [uebernachtung, setUebernachtung] = useState(act?.uebernachtung ?? false);
@@ -264,6 +274,9 @@ function ActModal({
       endMin,
       getIn: getIn.trim(),
       soundcheck: soundcheck.trim(),
+      showtime: showtime.trim(),
+      genre: genre.trim(),
+      herkunft: herkunft.trim(),
       kostenCents: cents && cents > 0 ? cents : null,
       anzahlPersonen: anzahl.trim() ? Number(anzahl) : null,
       uebernachtung,
@@ -374,16 +387,32 @@ function ActModal({
           <p className="mt-2 text-xs text-dim">Mit Floor & Showtime erscheint der Act automatisch im Line-up.</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="label">Get-in</label>
+            <label className="label">Load-in</label>
             <input type="time" className="input" value={getIn} onChange={(e) => setGetIn(e.target.value)} />
           </div>
           <div>
             <label className="label">Soundcheck</label>
             <input type="time" className="input" value={soundcheck} onChange={(e) => setSoundcheck(e.target.value)} />
           </div>
+          <div>
+            <label className="label">Showtime</label>
+            <input type="time" className="input" value={showtime} onChange={(e) => setShowtime(e.target.value)} />
+          </div>
         </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Genre</label>
+            <input className="input" value={genre} onChange={(e) => setGenre(e.target.value)} placeholder="z. B. Psych-Rock" />
+          </div>
+          <div>
+            <label className="label">Herkunft</label>
+            <input className="input" value={herkunft} onChange={(e) => setHerkunft(e.target.value)} placeholder="z. B. Bern" />
+          </div>
+        </div>
+        <p className="-mt-2 text-xs text-dim">Genre & Herkunft erscheinen auf dem Saisonplakat.</p>
 
         <div>
           <label className="label">Kosten / Gage (CHF)</label>

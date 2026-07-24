@@ -43,9 +43,6 @@ export default function AnlaesseUebersicht() {
   const [anlaesse, setAnlaesse] = useState<AnlassSummary[] | null>(null);
   const [error, setError] = useState("");
   const [hi, setHi] = useState("Hallo");
-  const [invite, setInvite] = useState("");
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
   const load = () =>
@@ -57,15 +54,7 @@ export default function AnlaesseUebersicht() {
   useEffect(() => {
     setHi(greeting());
     load();
-    api.get<{ text: string }>("/invite").then((d) => setInvite(d.text)).catch(() => undefined);
   }, []);
-
-  const copyInvite = () =>
-    invite &&
-    navigator.clipboard?.writeText(invite).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1400);
-    });
 
   const kommende = (anlaesse ?? []).filter((a) => !istVorbei(a.datum));
   const vergangene = (anlaesse ?? []).filter((a) => istVorbei(a.datum)).reverse();
@@ -77,12 +66,9 @@ export default function AnlaesseUebersicht() {
           {hi}, <span className="brand-text">{user?.name}</span>
         </h1>
         <div className="mt-3 flex gap-2">
-          <button className="btn-ghost flex-1 py-1.5 text-sm" onClick={copyInvite}>
-            <Icon name={copied ? "check" : "send"} size={15} /> {copied ? "Kopiert" : "Einladung"}
-          </button>
-          <button className="btn-ghost px-3 py-1.5" onClick={() => setInviteOpen(true)} aria-label="Einladung bearbeiten">
-            <Icon name="pencil" size={16} />
-          </button>
+          <a href="https://spinnplan-23.netlify.app" target="_blank" rel="noopener noreferrer" className="btn-ghost flex-1 py-1.5 text-sm">
+            <Icon name="calendar" size={15} /> Spinnplan
+          </a>
           {user?.rolle === "admin" && (
             <button className="btn-ghost flex-1 py-1.5 text-sm" onClick={() => setCreateOpen(true)}>
               <Icon name="plus" size={15} /> Anlass
@@ -118,16 +104,6 @@ export default function AnlaesseUebersicht() {
         </section>
       )}
 
-      {inviteOpen && (
-        <InviteModal
-          text={invite}
-          onClose={() => setInviteOpen(false)}
-          onSaved={(t) => {
-            setInvite(t);
-            setInviteOpen(false);
-          }}
-        />
-      )}
       {createOpen && (
         <CreateAnlassModal
           onClose={() => setCreateOpen(false)}
@@ -160,49 +136,6 @@ function AnlassKarte({ anlass }: { anlass: AnlassSummary }) {
       )}
       <Icon name="chevron" size={16} className="shrink-0 text-mute" />
     </Link>
-  );
-}
-
-function InviteModal({ text, onClose, onSaved }: { text: string; onClose: () => void; onSaved: (t: string) => void }) {
-  const [value, setValue] = useState(text);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const save = async () => {
-    if (!value.trim()) return setError("Text erforderlich");
-    setSaving(true);
-    setError("");
-    try {
-      await api.put("/invite", { text: value.trim() });
-      onSaved(value.trim());
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  };
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title="Einladungstext bearbeiten"
-      footer={
-        <div className="flex gap-2">
-          <button className="btn-ghost flex-1" onClick={onClose}>
-            Abbrechen
-          </button>
-          <button className="btn-primary flex-1" onClick={save} disabled={saving}>
-            Speichern
-          </button>
-        </div>
-      }
-    >
-      <div className="space-y-2">
-        <label className="label">Einladung (für SMS/WhatsApp)</label>
-        <textarea className="input min-h-[220px] resize-y text-sm" value={value} onChange={(e) => setValue(e.target.value)} />
-        <p className="text-xs text-mute">Wird für alle geändert. Der „Einladung kopieren“-Button kopiert diesen Text.</p>
-        {error && <p className="err-box">{error}</p>}
-      </div>
-    </Modal>
   );
 }
 

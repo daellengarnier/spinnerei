@@ -52,6 +52,9 @@ export async function GET(request: Request) {
       notiz: acts.notiz,
       getIn: acts.getIn,
       soundcheck: acts.soundcheck,
+      showtime: acts.showtime,
+      genre: acts.genre,
+      herkunft: acts.herkunft,
       createdAt: acts.createdAt,
       createdByName: users.name,
     })
@@ -118,6 +121,9 @@ export async function POST(request: Request) {
       notiz: String(body?.notiz ?? "").trim(),
       getIn: String(body?.getIn ?? "").trim(),
       soundcheck: String(body?.soundcheck ?? "").trim(),
+      showtime: String(body?.showtime ?? "").trim(),
+      genre: String(body?.genre ?? "").trim(),
+      herkunft: String(body?.herkunft ?? "").trim(),
       createdBy: auth.id,
     })
     .returning({ id: acts.id });

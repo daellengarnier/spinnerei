@@ -8,6 +8,7 @@ import { Avatar, EmptyState, Modal, Spinner } from "@/components/Ui";
 import { TodoRow } from "@/components/TodoRow";
 import { TodoFormModal } from "@/components/TodoFormModal";
 import { CommentThread } from "@/components/CommentThread";
+import { AssigneePicker } from "@/components/AssigneePicker";
 import { Zeitplan } from "@/components/Zeitplan";
 import { Finanzen } from "@/components/Finanzen";
 import { Acts } from "@/components/Acts";
@@ -43,6 +44,7 @@ export default function RessortPage() {
   const [editSub, setEditSub] = useState<SubRessort | null>(null);
   const [deleteSub, setDeleteSub] = useState<SubRessort | null>(null);
   const [collapsed, setCollapsed] = useState<Record<number, boolean>>({});
+  const [leadsOpen, setLeadsOpen] = useState(false);
 
   const openTodo = (subId: number | null) => {
     setCreateSeq((s) => s + 1);
@@ -83,7 +85,7 @@ export default function RessortPage() {
         </h1>
         {ressort.beschreibung && <p className="mt-1 text-sm text-dim">{ressort.beschreibung}</p>}
         <div className="mt-2.5 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-dim">Lead{ressort.leads.length !== 1 ? "s" : ""}:</span>
+          <span className="text-xs text-dim">Verantwortlich:</span>
           {ressort.leads.length === 0 && <span className="text-xs text-dim">—</span>}
           {ressort.leads.map((u) => (
             <span key={u.id} className="flex items-center gap-1.5 rounded-full bg-surface2 py-0.5 pl-0.5 pr-2.5 text-sm">
@@ -91,8 +93,27 @@ export default function RessortPage() {
               {u.name}
             </span>
           ))}
+          <button
+            className="grid h-7 w-7 place-items-center rounded-full border border-line2 text-dim active:scale-95"
+            onClick={() => setLeadsOpen(true)}
+            aria-label="Verantwortliche wählen"
+          >
+            <Icon name="pencil" size={13} />
+          </button>
         </div>
       </div>
+
+      {leadsOpen && (
+        <LeadsModal
+          ressortId={ressortId}
+          initial={ressort.leads.map((u) => u.id)}
+          onClose={() => setLeadsOpen(false)}
+          onSaved={() => {
+            setLeadsOpen(false);
+            load();
+          }}
+        />
+      )}
 
       <div className="seg overflow-x-auto">
         {ressort.hatActs && (
@@ -338,6 +359,57 @@ function SubRessortModal({
           <label className="label">Beschreibung (optional)</label>
           <textarea className="input min-h-[70px] resize-y" value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} />
         </div>
+      </div>
+    </Modal>
+  );
+}
+
+// Verantwortliche des Ressorts wählen — offen für alle Mitglieder.
+function LeadsModal({
+  ressortId,
+  initial,
+  onClose,
+  onSaved,
+}: {
+  ressortId: number;
+  initial: number[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [selected, setSelected] = useState<number[]>(initial);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const save = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await api.patch(`/ressorts/${ressortId}`, { leadUserIds: selected });
+      onSaved();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Verantwortliche wählen"
+      footer={
+        <div className="flex gap-2">
+          <button className="btn-ghost flex-1" onClick={onClose}>
+            Abbrechen
+          </button>
+          <button className="btn-primary flex-1" onClick={save} disabled={saving}>
+            Speichern
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-2">
+        <AssigneePicker selected={selected} onChange={setSelected} />
+        {error && <p className="err-box">{error}</p>}
       </div>
     </Modal>
   );

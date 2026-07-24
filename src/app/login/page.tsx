@@ -31,7 +31,9 @@ export default function LoginPage() {
     <div className="auth-bg flex min-h-screen flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center text-white">
-          <p className="lbl mb-2">Orga · Felsenau</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/pwa-192x192.png" alt="Spinnerei-Logo" className="mx-auto mb-4 h-20 w-20" />
+          <p className="lbl mb-2">Orga</p>
           <h1 className="page-title text-5xl">Spinnerei</h1>
         </div>
 

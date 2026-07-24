@@ -31,6 +31,12 @@ export const anlaesse = pgTable("anlaesse", {
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
   datum: text("datum").notNull(), // 'YYYY-MM-DD'
+  // Eckzeiten des Anlasses (Anlassübersicht), als 'HH:MM'.
+  tueroeffnung: text("tueroeffnung").notNull().default(""),
+  essen: text("essen").notNull().default(""),
+  ende: text("ende").notNull().default(""),
+  // Petzi-Ticketlink des Anlasses (Anlassübersicht).
+  petzilink: text("petzilink").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -166,14 +172,18 @@ export const acts = pgTable("acts", {
     .references(() => ressorts.id, { onDelete: "cascade" }),
   name: text("name").notNull().default(""),
   typ: text("typ").notNull().default("band"), // 'band' | 'dj' | 'andere'
+  // Genre & Herkunft (z. B. „Psych-Rock", „Bern") — relevant fürs Saisonplakat.
+  genre: text("genre").notNull().default(""),
+  herkunft: text("herkunft").notNull().default(""),
   kostenCents: integer("kostenCents"), // Gage – fließt in Finanzen (Posten „Gagen")
   uebernachtung: boolean("uebernachtung").notNull().default(false),
   anzahlPersonen: integer("anzahlPersonen"),
   promotext: text("promotext").notNull().default(""),
   notiz: text("notiz").notNull().default(""),
-  // Zeiten am Act (Showtime = verknüpfter Line-up-Eintrag). Get-in & Soundcheck als 'HH:MM'.
+  // Zeiten am Act als 'HH:MM' (getIn = Load-in). Erscheinen in der Anlassübersicht.
   getIn: text("getIn").notNull().default(""),
   soundcheck: text("soundcheck").notNull().default(""),
+  showtime: text("showtime").notNull().default(""),
   createdBy: integer("createdBy").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
 });

@@ -112,14 +112,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <header className="pt-safe brand-header sticky top-0 z-30">
         <div className="flex items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center border border-line2 bg-surface text-accent">
-              <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">
-                <path d="M12 3 21 20 H3 Z" fill="currentColor" />
-              </svg>
-            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/pwa-192x192.png" alt="" className="h-9 w-9 shrink-0" />
+
             <span className="flex flex-col leading-none">
               <span className="brand-wordmark">Spinnerei</span>
-              <span className="brand-sub">Orga · Felsenau</span>
+              <span className="brand-sub">Orga</span>
             </span>
           </Link>
           <div className="flex items-center gap-1">
@@ -188,7 +186,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           {TABS.map((t) => {
             // Home-Tab gilt auch innerhalb eines Anlasses/Ressorts als aktiv.
             const isActive = t.exact
-              ? pathname === t.href || ["/anlass", "/ressort", "/todo", "/meetings"].some((p) => pathname.startsWith(p))
+              ? pathname === t.href || ["/anlass", "/ressort", "/todo"].some((p) => pathname.startsWith(p))
               : pathname.startsWith(t.href);
             return (
               <Link key={t.href} href={t.href} className={`relative flex flex-col items-center gap-0.5 py-1 text-[10px] font-extrabold ${isActive ? "text-white" : "text-white/60"}`}>

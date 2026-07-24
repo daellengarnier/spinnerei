@@ -1,27 +1,60 @@
-import { eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { requireUser, requireAdmin, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
-import { anlaesse } from "@/lib/db/schema";
+import { acts, anlaesse, ressorts } from "@/lib/db/schema";
 
-// Einzelner Anlass (für Header/Kontext im Frontend).
+// Einzelner Anlass inkl. Anlassübersicht: Eckzeiten + alle Acts (mit Zeiten)
+// aus den Acts-Ressorts dieses Anlasses.
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireUser();
   if (isResponse(auth)) return auth;
   const id = Number((await params).id);
   if (!id) return Response.json({ error: "Ungültige ID" }, { status: 400 });
-  const rows = await getDb().select().from(anlaesse).where(eq(anlaesse.id, id)).limit(1);
+  const db = getDb();
+  const rows = await db.select().from(anlaesse).where(eq(anlaesse.id, id)).limit(1);
   if (!rows[0]) return Response.json({ error: "Anlass nicht gefunden" }, { status: 404 });
-  return Response.json({ anlass: rows[0] });
+
+  const anlassRessorts = await db
+    .select({ id: ressorts.id })
+    .from(ressorts)
+    .where(eq(ressorts.anlassId, id));
+  const ressortIds = anlassRessorts.map((r) => r.id);
+  const anlassActs = ressortIds.length
+    ? await db
+        .select({
+          id: acts.id,
+          ressortId: acts.ressortId,
+          name: acts.name,
+          typ: acts.typ,
+          getIn: acts.getIn,
+          soundcheck: acts.soundcheck,
+          showtime: acts.showtime,
+        })
+        .from(acts)
+        .where(inArray(acts.ressortId, ressortIds))
+        .orderBy(asc(acts.showtime), asc(acts.name))
+    : [];
+
+  return Response.json({ anlass: rows[0], acts: anlassActs });
 }
 
-// Admin: Anlass umbenennen / Datum ändern.
+// Anlass ändern. Eckzeiten (Türöffnung/Essen/Ende) dürfen alle Mitglieder
+// pflegen; Name/Datum nur Admin.
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdmin();
-  if (isResponse(auth)) return auth;
   const id = Number((await params).id);
   if (!id) return Response.json({ error: "Ungültige ID" }, { status: 400 });
   const body = await request.json().catch(() => ({}));
-  const patch: Partial<{ name: string; datum: string }> = {};
+
+  const wantsAdminFields = body?.name !== undefined || body?.datum !== undefined;
+  const auth = wantsAdminFields ? await requireAdmin() : await requireUser();
+  if (isResponse(auth)) return auth;
+
+  const zeit = (v: unknown) => {
+    const s = String(v).trim();
+    return s === "" || /^\d{2}:\d{2}$/.test(s) ? s : null;
+  };
+
+  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; petzilink: string }> = {};
   if (body?.name !== undefined) {
     const name = String(body.name).trim();
     if (!name) return Response.json({ error: "Name darf nicht leer sein" }, { status: 400 });
@@ -31,6 +64,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const datum = String(body.datum).trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(datum)) return Response.json({ error: "Datum als YYYY-MM-DD" }, { status: 400 });
     patch.datum = datum;
+  }
+  for (const feld of ["tueroeffnung", "essen", "ende"] as const) {
+    if (body?.[feld] !== undefined) {
+      const wert = zeit(body[feld]);
+      if (wert === null) return Response.json({ error: "Zeit als HH:MM" }, { status: 400 });
+      patch[feld] = wert;
+    }
+  }
+  if (body?.petzilink !== undefined) {
+    const link = String(body.petzilink).trim();
+    if (link && !/^https?:\/\//.test(link)) return Response.json({ error: "Petzilink muss mit http(s):// beginnen" }, { status: 400 });
+    patch.petzilink = link;
   }
   if (Object.keys(patch).length === 0) return Response.json({ error: "Nichts zu ändern" }, { status: 400 });
   await getDb().update(anlaesse).set(patch).where(eq(anlaesse.id, id));
