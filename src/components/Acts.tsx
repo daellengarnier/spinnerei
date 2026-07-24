@@ -16,11 +16,13 @@ function parseChf(s: string): number {
 
 export function Acts({ ressortId }: { ressortId: number }) {
   const [acts, setActs] = useState<Act[] | null>(null);
+  const [anlassDrivelink, setAnlassDrivelink] = useState("");
   const [modal, setModal] = useState<Act | "new" | null>(null);
 
   const load = () =>
-    api.get<{ acts: Act[] }>(`/acts?ressortId=${ressortId}`).then((d) => {
+    api.get<{ acts: Act[]; anlassDrivelink: string }>(`/acts?ressortId=${ressortId}`).then((d) => {
       setActs(d.acts);
+      setAnlassDrivelink(d.anlassDrivelink ?? "");
     });
   useEffect(() => {
     load();
@@ -57,6 +59,7 @@ export function Acts({ ressortId }: { ressortId: number }) {
       {modal && (
         <ActModal
           ressortId={ressortId}
+          anlassDrivelink={anlassDrivelink}
           act={modal === "new" ? null : modal}
           onClose={() => setModal(null)}
           onSaved={() => {
@@ -131,11 +134,13 @@ function ActCard({ act: a, onOpen }: { act: Act; onOpen: () => void }) {
 
 function ActModal({
   ressortId,
+  anlassDrivelink,
   act,
   onClose,
   onSaved,
 }: {
   ressortId: number;
+  anlassDrivelink: string;
   act: Act | null;
   onClose: () => void;
   onSaved: () => void;
@@ -298,17 +303,19 @@ function ActModal({
             <input
               type="url"
               className="input min-w-0 flex-1"
-              placeholder="https://drive.google.com/…"
+              placeholder={anlassDrivelink ? "Leer = Drive-Ordner des Anlasses" : "https://drive.google.com/…"}
               value={drivelink}
               onChange={(e) => setDrivelink(e.target.value)}
             />
-            {drivelink.trim() && (
-              <a href={drivelink.trim()} target="_blank" rel="noopener noreferrer" className="btn-ghost shrink-0 px-3 text-sm">
+            {(drivelink.trim() || anlassDrivelink) && (
+              <a href={drivelink.trim() || anlassDrivelink} target="_blank" rel="noopener noreferrer" className="btn-ghost shrink-0 px-3 text-sm">
                 Öffnen
               </a>
             )}
           </div>
-          <p className="mt-1 text-xs text-dim">Rider & Dokumente liegen im Drive-Ordner des Anlasses — hier den Link zum Unterordner des Acts einfügen.</p>
+          <p className="mt-1 text-xs text-dim">
+            Ohne eigenen Link gilt automatisch der Drive-Ordner des Anlasses (aus der Anlassübersicht). Eigenen Link nur einfügen, wenn der Act einen separaten Unterordner hat.
+          </p>
         </div>
 
         {error && <p className=" bg-terra-light px-3 py-2 text-sm text-terra-dark">{error}</p>}

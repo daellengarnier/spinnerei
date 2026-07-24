@@ -1,7 +1,7 @@
 import { eq, and, asc, inArray } from "drizzle-orm";
 import { requireUser, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
-import { acts, actFiles, attachments, scheduleEntries, scheduleFloors, users, ressorts } from "@/lib/db/schema";
+import { acts, actFiles, attachments, anlaesse, scheduleEntries, scheduleFloors, users, ressorts } from "@/lib/db/schema";
 import { syncActExpense } from "@/lib/actExpense";
 import { syncActSchedule } from "@/lib/actSchedule";
 import { gaestezimmerTodo } from "@/lib/actTodo";
@@ -96,7 +96,14 @@ export async function GET(request: Request) {
   }
 
   const list = rows.map((r) => ({ ...r, files: filesByAct.get(r.id) ?? [], slot: slotByAct.get(r.id) ?? null }));
-  return Response.json({ acts: list, floors: await programmFloors() });
+  // Drive-Ordner des Anlasses als Fallback, wenn ein Act keinen eigenen Link hat.
+  const anlassRow = await db
+    .select({ drivelink: anlaesse.drivelink })
+    .from(ressorts)
+    .innerJoin(anlaesse, eq(anlaesse.id, ressorts.anlassId))
+    .where(eq(ressorts.id, ressortId))
+    .limit(1);
+  return Response.json({ acts: list, anlassDrivelink: anlassRow[0]?.drivelink ?? "", floors: await programmFloors() });
 }
 
 export async function POST(request: Request) {
