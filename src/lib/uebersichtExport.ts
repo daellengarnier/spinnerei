@@ -20,11 +20,11 @@ export interface UebersichtAnlass {
   essen: string;
   ende: string;
   petzilink: string;
+  drivelink: string;
+  abendverantwortung: string;
   acts: UebersichtAct[];
 }
 
-// PDF der Saison-Übersicht im App-Stil: dunkler Grund, Karten,
-// Gold-Akzente, Uppercase-Titel (clientseitig mit jsPDF, Helvetica).
 // Text für ICS escapen (Komma, Semikolon, Zeilenumbrüche).
 const icsText = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
 const icsDatum = (datum: string) => datum.replace(/-/g, "");

@@ -1,7 +1,7 @@
 import { asc, inArray } from "drizzle-orm";
 import { requireUser, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
-import { acts, anlaesse, ressorts } from "@/lib/db/schema";
+import { acts, anlaesse, ressorts, users } from "@/lib/db/schema";
 
 // Saison-Übersicht: alle Anlässe mit Eckdaten (Datum, Art, Zeiten, Petzilink)
 // und ihren Acts (Genre, Herkunft, Showtime) — alles automatisch aus den
@@ -12,6 +12,8 @@ export async function GET() {
   const db = getDb();
 
   const alleAnlaesse = await db.select().from(anlaesse).orderBy(asc(anlaesse.datum));
+  const alleUser = await db.select({ id: users.id, name: users.name }).from(users);
+  const userName = new Map(alleUser.map((u) => [u.id, u.name]));
   const alleRessorts = alleAnlaesse.length
     ? await db
         .select({ id: ressorts.id, anlassId: ressorts.anlassId })

@@ -9,6 +9,7 @@ import { Icon } from "@/components/Icon";
 import { ressortIcon } from "@/lib/ressortIcon";
 import { ressortHint } from "@/lib/ressortHint";
 import { useAuth } from "@/components/AuthContext";
+import { useUsers } from "@/lib/useUsers";
 import { formatDate, istFolgetag } from "@/lib/uiUtil";
 import type { RessortSummary } from "@/lib/uiTypes";
 
@@ -25,6 +26,7 @@ interface Anlass {
   stichwort: string;
   zugang: string;
   drivelink: string;
+  abendverantwortungUserId: number | null;
 }
 
 interface AnlassAct {
@@ -155,6 +157,18 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
     }
   };
 
+  const nutzer = useUsers();
+  const [avId, setAvId] = useState<number | null>(anlass.abendverantwortungUserId);
+  const saveAv = async (id: number | null) => {
+    setAvId(id);
+    setError("");
+    try {
+      await api.patch(`/anlaesse/${anlass.id}`, { abendverantwortungUserId: id });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
   // Stichwort nur für Anlässe ohne Konzert-Charakter (Party etc.) —
   // bei (Doppel-)Konzerten kommt das Genre von den Acts.
   const zeigeStichwort = !werte.art.toLowerCase().includes("konzert");
@@ -162,6 +176,7 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
   const fehlend = [
     ...(werte.art ? [] : ["Art des Anlasses"]),
     ...(werte.zugang ? [] : ["Privat/Öffentlich"]),
+    ...(avId ? [] : ["Abendverantwortung"]),
     ...(brauchtStichwort && !werte.stichwort ? ["Stichwort (z. B. Musikrichtung)"] : []),
     ...ZEIT_FELDER.filter((f) => !werte[f.key]).map((f) => f.label),
     ...(werte.petzilink ? [] : ["Petzilink"]),
@@ -215,6 +230,18 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
           <option value="Fest" />
           <option value="Vermietung" />
         </datalist>
+      </div>
+
+      <div className="mb-2">
+        <label className="label text-xs">Abendverantwortung (AV)</label>
+        <select className="input px-2 py-1.5 text-sm" value={avId ?? ""} onChange={(e) => saveAv(e.target.value ? Number(e.target.value) : null)}>
+          <option value="">— noch offen —</option>
+          {nutzer.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {zeigeStichwort && (

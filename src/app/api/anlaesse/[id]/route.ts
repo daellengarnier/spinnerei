@@ -1,7 +1,7 @@
 import { asc, eq, inArray } from "drizzle-orm";
 import { requireUser, requireAdmin, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
-import { acts, anlaesse, ressorts } from "@/lib/db/schema";
+import { acts, anlaesse, ressorts, users } from "@/lib/db/schema";
 
 // Einzelner Anlass inkl. Anlassübersicht: Eckzeiten + alle Acts (mit Zeiten)
 // aus den Acts-Ressorts dieses Anlasses.
@@ -35,7 +35,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         .orderBy(asc(acts.showtime), asc(acts.name))
     : [];
 
-  return Response.json({ anlass: rows[0], acts: anlassActs });
+  // Abendverantwortung auflösen (Name für die Anzeige).
+  let abendverantwortung: { id: number; name: string; avatarColor: string } | null = null;
+  if (rows[0].abendverantwortungUserId) {
+    const av = await db
+      .select({ id: users.id, name: users.name, avatarColor: users.avatarColor })
+      .from(users)
+      .where(eq(users.id, rows[0].abendverantwortungUserId))
+      .limit(1);
+    abendverantwortung = av[0] ?? null;
+  }
+  return Response.json({ anlass: rows[0], abendverantwortung, acts: anlassActs });
 }
 
 // Anlass ändern. Eckzeiten (Türöffnung/Essen/Ende) dürfen alle Mitglieder
@@ -54,7 +64,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return s === "" || /^\d{2}:\d{2}$/.test(s) ? s : null;
   };
 
-  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; petzilink: string; art: string; stichwort: string; zugang: string; drivelink: string }> = {};
+  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; petzilink: string; art: string; stichwort: string; zugang: string; drivelink: string; abendverantwortungUserId: number | null }> = {};
   if (body?.name !== undefined) {
     const name = String(body.name).trim();
     if (!name) return Response.json({ error: "Name darf nicht leer sein" }, { status: 400 });
@@ -84,6 +94,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const link = String(body.petzilink).trim();
     if (link && !/^https?:\/\//.test(link)) return Response.json({ error: "Petzilink muss mit http(s):// beginnen" }, { status: 400 });
     patch.petzilink = link;
+  }
+  if (body?.abendverantwortungUserId !== undefined) {
+    patch.abendverantwortungUserId = body.abendverantwortungUserId ? Number(body.abendverantwortungUserId) : null;
   }
   if (body?.drivelink !== undefined) {
     const link = String(body.drivelink).trim();

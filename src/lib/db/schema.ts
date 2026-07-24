@@ -46,6 +46,8 @@ export const anlaesse = pgTable("anlaesse", {
   zugang: text("zugang").notNull().default(""),
   // Link zum Google-Drive-Ordner des Anlasses.
   drivelink: text("drivelink").notNull().default(""),
+  // Abendverantwortung (AV) des Anlasses.
+  abendverantwortungUserId: integer("abendverantwortungUserId"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

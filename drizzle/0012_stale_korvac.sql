@@ -1,0 +1,1 @@
+ALTER TABLE "anlaesse" ADD COLUMN "abendverantwortungUserId" integer;
