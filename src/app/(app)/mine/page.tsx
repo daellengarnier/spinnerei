@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/apiClient";
-import { EmptyState, MentionText, Spinner } from "@/components/Ui";
+import { EmptyState, MentionText, Modal, Spinner } from "@/components/Ui";
+import { Icon } from "@/components/Icon";
+import { useAuth } from "@/components/AuthContext";
 import { TodoRow } from "@/components/TodoRow";
 import { relTime } from "@/lib/uiUtil";
 import type { Todo } from "@/lib/uiTypes";
@@ -21,6 +23,7 @@ export default function MinePage() {
   const [assigned, setAssigned] = useState<Todo[] | null>(null);
   const [mentioned, setMentioned] = useState<MentionRow[]>([]);
   const [tab, setTab] = useState<"assigned" | "mentioned">("assigned");
+  const [neuOpen, setNeuOpen] = useState(false);
 
   const load = () =>
     api.get<{ assigned: Todo[]; mentioned: MentionRow[] }>("/todos/mine").then((d) => {
@@ -38,6 +41,10 @@ export default function MinePage() {
   return (
     <div className="space-y-4">
       <h1 className="page-title">Meine Sachen</h1>
+
+      <button className="btn-primary w-full" onClick={() => setNeuOpen(true)}>
+        <Icon name="plus" size={17} /> Todo für mich erstellen
+      </button>
 
       <div className="flex gap-1  bg-surface2 p-1 text-sm font-medium">
         <button className={`flex-1  py-2 ${tab === "assigned" ? "bg-surface shadow-sm" : "text-dim"}`} onClick={() => setTab("assigned")}>
@@ -97,7 +104,134 @@ export default function MinePage() {
           ))}
         </div>
       )}
+      {neuOpen && (
+        <NeuesTodoModal
+          onClose={() => setNeuOpen(false)}
+          onSaved={() => {
+            setNeuOpen(false);
+            load();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+// Eigenes Todo erstellen: Anlass + Ressort wählen, wird automatisch mir zugewiesen.
+function NeuesTodoModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const { user } = useAuth();
+  const [anlaesse, setAnlaesse] = useState<{ id: number; name: string }[] | null>(null);
+  const [anlassId, setAnlassId] = useState<number | null>(null);
+  const [ressorts, setRessorts] = useState<{ id: number; name: string }[] | null>(null);
+  const [ressortId, setRessortId] = useState<number | null>(null);
+  const [titel, setTitel] = useState("");
+  const [beschreibung, setBeschreibung] = useState("");
+  const [fristDatum, setFristDatum] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api
+      .get<{ anlaesse: { id: number; name: string; datum: string }[] }>("/anlaesse")
+      .then((d) => {
+        setAnlaesse(d.anlaesse);
+        // Nächster (erster kommender) Anlass als Vorauswahl.
+        const heute = new Date().toISOString().slice(0, 10);
+        const naechster = d.anlaesse.find((a) => a.datum >= heute) ?? d.anlaesse[0];
+        if (naechster) setAnlassId(naechster.id);
+      })
+      .catch((e) => setError((e as Error).message));
+  }, []);
+
+  useEffect(() => {
+    if (!anlassId) return;
+    setRessorts(null);
+    setRessortId(null);
+    api
+      .get<{ ressorts: { id: number; name: string }[] }>(`/ressorts?anlass=${anlassId}`)
+      .then((d) => {
+        setRessorts(d.ressorts);
+        if (d.ressorts[0]) setRessortId(d.ressorts[0].id);
+      })
+      .catch((e) => setError((e as Error).message));
+  }, [anlassId]);
+
+  const save = async () => {
+    if (!titel.trim()) return setError("Titel erforderlich");
+    if (!ressortId) return setError("Ressort wählen");
+    setSaving(true);
+    setError("");
+    try {
+      await api.post("/todos", {
+        ressortId,
+        titel: titel.trim(),
+        beschreibung,
+        fristDatum: fristDatum || null,
+        assigneeIds: user ? [user.id] : [],
+      });
+      onSaved();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Todo für mich"
+      footer={
+        <div className="flex gap-2">
+          <button className="btn-ghost flex-1" onClick={onClose}>
+            Abbrechen
+          </button>
+          <button className="btn-primary flex-1" onClick={save} disabled={saving}>
+            {saving ? "Erstellen …" : "Erstellen"}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="label">Titel</label>
+          <input className="input" value={titel} onChange={(e) => setTitel(e.target.value)} autoFocus placeholder="Was ist zu tun?" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Anlass</label>
+            <select className="input" value={anlassId ?? ""} onChange={(e) => setAnlassId(Number(e.target.value))}>
+              {(anlaesse ?? []).map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Ressort</label>
+            <select className="input" value={ressortId ?? ""} onChange={(e) => setRessortId(Number(e.target.value))} disabled={!ressorts}>
+              {(ressorts ?? []).map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="label">Frist (optional)</label>
+          <input type="date" className="input" value={fristDatum} onChange={(e) => setFristDatum(e.target.value)} />
+        </div>
+        <div>
+          <label className="label">Beschreibung (optional)</label>
+          <textarea className="input min-h-[80px] resize-y text-sm" value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} />
+        </div>
+        <p className="text-xs text-dim">Das Todo wird dir automatisch zugewiesen und erscheint auch im gewählten Ressort.</p>
+        {error && <p className="err-box">{error}</p>}
+      </div>
+    </Modal>
   );
 }
 
