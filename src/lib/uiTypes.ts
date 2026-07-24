@@ -194,8 +194,9 @@ export interface Todo {
   commentCount?: number;
   ressort?: { id: number; name: string; farbe: string };
   subRessort?: { id: number; name: string } | null;
-  ressortName?: string;
-  ressortFarbe?: string;
+  ressortName?: string | null;
+  ressortFarbe?: string | null;
+  anlassName?: string | null;
 }
 
 export interface Comment {

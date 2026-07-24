@@ -1,7 +1,7 @@
 import { eq, desc, asc, sql } from "drizzle-orm";
 import { requireUser, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
-import { todos, todoAssignees, ressorts, comments, commentMentions, users } from "@/lib/db/schema";
+import { anlaesse, todos, todoAssignees, ressorts, comments, commentMentions, users } from "@/lib/db/schema";
 
 // "Meine Sachen": mir zugewiesene Todos + @mich erwähnt.
 export async function GET() {
@@ -23,12 +23,15 @@ export async function GET() {
       updatedAt: todos.updatedAt,
       ressortName: ressorts.name,
       ressortFarbe: ressorts.farbe,
+      anlassName: anlaesse.name,
     })
     .from(todoAssignees)
     .innerJoin(todos, eq(todos.id, todoAssignees.todoId))
     .leftJoin(ressorts, eq(ressorts.id, todos.ressortId))
+    .leftJoin(anlaesse, eq(anlaesse.id, ressorts.anlassId))
+    // Nach Herkunft gruppiert (Anlässe, dann HQ, dann persönliche Todos).
     .where(eq(todoAssignees.userId, uid))
-    .orderBy(asc(todos.status), sql`${todos.fristDatum} NULLS LAST`);
+    .orderBy(sql`${anlaesse.name} NULLS LAST`, asc(todos.ressortId), sql`${todos.fristDatum} NULLS LAST`);
 
   const mentioned = await db
     .select({

@@ -236,13 +236,21 @@ function NeuesTodoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
   );
 }
 
+// Gruppen-Header: woher das Todo kommt — «Anlass · Ressort», «HQ · Ressort»
+// oder «Sonstige Todos» für persönliche Todos ohne Anlass.
+function herkunftLabel(todo: Todo): string {
+  if (!todo.ressortName) return "Sonstige Todos";
+  return `${todo.anlassName ?? "HQ"} · ${todo.ressortName}`;
+}
+
 function TodoRowWithRessort({ todo, showRessort = true, onChanged }: { todo: Todo; showRessort?: boolean; onChanged: () => void }) {
+  const farbe = todo.ressortName ? (todo.ressortFarbe ?? "#64748b") : "#8a8a8a";
   return (
     <div>
-      {showRessort && todo.ressortName && (
-        <div className="flex items-center gap-1.5 px-3 pt-2 text-xs font-medium" style={{ color: todo.ressortFarbe ?? "#64748b" }}>
-          <span className="h-2 w-2 rounded-full" style={{ background: todo.ressortFarbe ?? "#64748b" }} />
-          {todo.ressortName}
+      {showRessort && (
+        <div className="flex items-center gap-1.5 px-3 pt-2 text-xs font-medium" style={{ color: farbe }}>
+          <span className="h-2 w-2 rounded-full" style={{ background: farbe }} />
+          {herkunftLabel(todo)}
         </div>
       )}
       <TodoRow todo={{ ...todo, assignees: todo.assignees ?? [] }} detail onChanged={onChanged} onDeleted={onChanged} />
