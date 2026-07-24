@@ -207,9 +207,8 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
         <div className="border-t border-line px-3.5 pb-3.5 pt-2.5">
           {detail ? (
             <>
-              {(detail.art || detail.stichwort || zugangLabel) && (
+              {(detail.stichwort || zugangLabel) && (
                 <div className="flex flex-wrap gap-1.5">
-                  {detail.art && <span className="chip bg-surface2 text-dim">{detail.art}</span>}
                   {detail.stichwort && <span className="chip bg-accent/10 text-accent">{detail.stichwort}</span>}
                   {zugangLabel && <span className="chip bg-surface2 text-dim">{zugangLabel}</span>}
                 </div>
