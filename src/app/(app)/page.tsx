@@ -169,7 +169,23 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
             <span className="date-badge-month">{monat}</span>
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold text-ink">{anlass.name}</p>
+            <p className="flex items-center gap-2 font-semibold text-ink">
+              <span className="truncate">{anlass.name}</span>
+              {detail && (
+                <button
+                  className="shrink-0 text-mute transition hover:text-accent active:scale-95"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    icsHerunterladen([detail], `Spinnerei_${anlass.name.replace(/[^\wäöüÄÖÜ-]+/g, "_")}.ics`);
+                  }}
+                  aria-label="In Kalender übertragen"
+                  title="In Kalender übertragen"
+                >
+                  <Icon name="calendar" size={15} />
+                </button>
+              )}
+            </p>
             {detail?.art && <p className="mt-0.5 truncate text-xs text-mute">{detail.art}</p>}
           </div>
           {anlass.openTodos > 0 && (
@@ -228,12 +244,6 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
                   ))}
                 </div>
               )}
-              <button
-                className="btn-ghost mt-3 w-full py-1.5 text-xs"
-                onClick={() => icsHerunterladen([detail], `Spinnerei_${anlass.name.replace(/[^\wäöüÄÖÜ-]+/g, "_")}.ics`)}
-              >
-                <Icon name="calendar" size={14} /> In Kalender übertragen
-              </button>
             </>
           ) : (
             <p className="text-xs text-dim">Lade Details …</p>
