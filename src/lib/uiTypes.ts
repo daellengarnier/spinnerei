@@ -114,6 +114,7 @@ export interface Act {
   kostenCents: number | null;
   uebernachtung: boolean;
   anzahlPersonen: number | null;
+  driver: boolean;
   promotext: string;
   notiz: string;
   getIn: string; // Load-in

@@ -209,6 +209,8 @@ export const acts = pgTable("acts", {
   kostenCents: integer("kostenCents"), // Gage – fließt in Finanzen (Posten „Gagen")
   uebernachtung: boolean("uebernachtung").notNull().default(false),
   anzahlPersonen: integer("anzahlPersonen"),
+  // Band tourt mit eigenem Driver (zählt oft zusätzlich zur Bandgrösse).
+  driver: boolean("driver").notNull().default(false),
   promotext: text("promotext").notNull().default(""),
   notiz: text("notiz").notNull().default(""),
   // Zeiten am Act als 'HH:MM' (getIn = Load-in). Erscheinen in der Anlassübersicht.

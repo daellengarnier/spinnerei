@@ -1,0 +1,1 @@
+ALTER TABLE "acts" ADD COLUMN "driver" boolean DEFAULT false NOT NULL;

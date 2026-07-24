@@ -112,8 +112,10 @@ function ActCard({ act: a, onOpen }: { act: Act; onOpen: () => void }) {
             {a.anzahlPersonen != null && (
               <span className="inline-flex items-center gap-1">
                 <Icon name="user" size={13} /> {a.anzahlPersonen}
+                {a.driver && " + Driver"}
               </span>
             )}
+            {a.anzahlPersonen == null && a.driver && <span className="inline-flex items-center gap-1">eigener Driver</span>}
             {a.uebernachtung && (
               <span className="inline-flex items-center gap-1 text-accent-dark">
                 <Icon name="bed" size={14} /> Übernachtung
@@ -155,6 +157,7 @@ function ActModal({
   const [herkunft, setHerkunft] = useState(act?.herkunft ?? "");
   const [gage, setGage] = useState(act?.kostenCents != null ? (act.kostenCents / 100).toFixed(2) : "");
   const [anzahl, setAnzahl] = useState(act?.anzahlPersonen != null ? String(act.anzahlPersonen) : "");
+  const [driver, setDriver] = useState(act?.driver ?? false);
   const [uebernachtung, setUebernachtung] = useState(act?.uebernachtung ?? false);
   const [promotext, setPromotext] = useState(act?.promotext ?? "");
   const [notiz, setNotiz] = useState(act?.notiz ?? "");
@@ -201,6 +204,7 @@ function ActModal({
       herkunft: herkunft.trim(),
       kostenCents: cents && cents > 0 ? cents : null,
       anzahlPersonen: anzahl.trim() ? Number(anzahl) : null,
+      driver,
       uebernachtung,
       promotext: promotext.trim(),
       notiz: notiz.trim(),
@@ -266,6 +270,11 @@ function ActModal({
             <input className="input" inputMode="numeric" value={anzahl} onChange={(e) => setAnzahl(e.target.value)} placeholder="z. B. 4" />
           </div>
         </div>
+
+        <label className="flex items-center gap-3 border border-line bg-surface2 px-3 py-2.5">
+          <input type="checkbox" className="h-5 w-5 accent-accent" checked={driver} onChange={(e) => setDriver(e.target.checked)} />
+          <span className="text-sm font-medium text-ink">Band kommt mit eigenem Driver</span>
+        </label>
 
         <div className="grid grid-cols-3 gap-3">
           <div>
