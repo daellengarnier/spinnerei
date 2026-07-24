@@ -188,20 +188,20 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
           {detail ? (
             <>
               {(detail.tueroeffnung || detail.essen || detail.ende || detail.petzilink || ticketpreisText(detail.normaltarifCents, detail.solitarifCents)) && (
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-dim">
+                <div className="mt-2 space-y-1 text-xs text-dim">
                   {ticketpreisText(detail.normaltarifCents, detail.solitarifCents) && (
-                    <span className="text-ink">{ticketpreisText(detail.normaltarifCents, detail.solitarifCents)}</span>
+                    <p className="text-ink">{ticketpreisText(detail.normaltarifCents, detail.solitarifCents)}</p>
                   )}
-                  {detail.tueroeffnung && <span>Türöffnung {detail.tueroeffnung}</span>}
-                  {detail.essen && <span>Essen {detail.essen}</span>}
+                  {detail.tueroeffnung && <p>Türöffnung {detail.tueroeffnung}</p>}
+                  {detail.essen && <p>Essen {detail.essen}</p>}
                   {detail.ende && (
-                    <span>
+                    <p>
                       Ende {detail.ende}
                       {istFolgetag(detail.tueroeffnung, detail.ende) && " (Folgetag)"}
-                    </span>
+                    </p>
                   )}
                   {detail.petzilink && (
-                    <a href={detail.petzilink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-accent">
+                    <a href={detail.petzilink} target="_blank" rel="noopener noreferrer" className="flex w-fit items-center gap-1 text-accent">
                       <Icon name="send" size={11} /> Petzi
                     </a>
                   )}
