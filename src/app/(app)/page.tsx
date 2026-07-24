@@ -66,6 +66,9 @@ export default function AnlaesseUebersicht() {
           {hi}, <span className="brand-text">{user?.name}</span>
         </h1>
         <div className="mt-3 flex gap-2">
+          <Link href="/uebersicht" className="btn-ghost flex-1 py-1.5 text-sm">
+            <Icon name="tasks" size={15} /> Übersicht
+          </Link>
           <a href="https://spinnplan-23.netlify.app" target="_blank" rel="noopener noreferrer" className="btn-ghost flex-1 py-1.5 text-sm">
             <Icon name="calendar" size={15} /> Spinnplan
           </a>
