@@ -1,1 +1,281 @@
 @import "tailwindcss";
+
+/* ─── Design-System „Spinnplan" ──────────────────────────────────────────
+   1:1 aus der Spinnplan-App übernommen: Industrial-Dark (#0a0a0a),
+   Barlow als Grundschrift, Share Tech Mono für Labels/Buttons (uppercase,
+   gesperrt), VT323 für Titel, Gold als Akzent, scharfe Kanten, 1px-Linien. */
+@theme {
+  --color-accent: #c9a84c; /* Gold */
+  --color-accent-dark: #a8893a;
+  --color-accent-light: #2a2413;
+  --color-terra: #e63329; /* Rot (Badges, destruktiv) */
+  --color-terra-dark: #ff6b62;
+  --color-terra-light: #3a1512;
+  --color-ink: #f0f0f0; /* Haupttext */
+  --color-mute: #666;
+  --color-dim: #999;
+  --color-sub: #999;
+  --color-label: #c9a84c;
+  --color-surface: #141414;
+  --color-surface2: #1e1e1e;
+  --color-line: #2a2a2a;
+  --color-line2: #383838;
+
+  --font-sans: var(--font-barlow), "Barlow", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --mono: var(--font-tech-mono), "Share Tech Mono", monospace;
+  --cond: var(--font-vt323), "VT323", monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+  font-family: var(--font-sans);
+  background-color: #0a0a0a;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #111;
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+}
+
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) * 0.55 + 0.1rem);
+}
+.pt-safe {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.4rem);
+}
+
+/* Marken-Schriftzug im Header. */
+.brand-wordmark {
+  font-family: var(--cond);
+  font-size: 1.55rem;
+  font-weight: 400;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #fff;
+}
+.brand-sub {
+  margin-top: 2px;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-mute);
+}
+.brand-text {
+  color: var(--color-accent);
+}
+.brand-gradient {
+  background: #000;
+}
+.hero-gradient {
+  background: #000;
+}
+
+/* Header: schwarz, dünne Linie unten (Spinnplan .header). */
+.brand-header {
+  background: #000;
+  border-bottom: 1px solid var(--color-line);
+}
+
+/* Untere Tab-Bar: Surface + Linie oben. */
+.tabbar {
+  background: rgba(10, 10, 10, 0.96);
+  border-top: 1px solid var(--color-line);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Auth-Seiten: schlicht schwarz (Spinnplan .auth-wrap). */
+.auth-bg {
+  background: #000;
+}
+
+@layer components {
+  .btn,
+  .btn-primary,
+  .btn-ghost,
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  /* Primär: weiss auf schwarz (Spinnplan .btn-full.primary). */
+  .btn-primary {
+    background: var(--color-ink);
+    color: #000;
+    border: 1px solid var(--color-ink);
+  }
+  .btn-primary:hover {
+    background: #ddd;
+  }
+  /* Ghost: transparent mit Linie (Spinnplan .btn). */
+  .btn-ghost {
+    color: var(--color-dim);
+    background: transparent;
+    border: 1px solid var(--color-line2);
+  }
+  .btn-ghost:hover {
+    border-color: var(--color-ink);
+    color: var(--color-ink);
+  }
+  .btn-danger {
+    color: var(--color-terra);
+    background: transparent;
+    border: 1px solid var(--color-terra);
+  }
+  .btn-danger:hover {
+    background: var(--color-terra);
+    color: #fff;
+  }
+  .input {
+    @apply w-full px-3.5 py-2.5 text-base text-ink outline-none transition;
+    background: var(--color-surface2);
+    border: 1px solid var(--color-line2);
+    color-scheme: dark;
+  }
+  .input:focus {
+    border-color: var(--color-ink);
+  }
+  .label {
+    @apply mb-1 block;
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-mute);
+  }
+  /* Kapitälchen-Label für Abschnitte („Ressorts", „Kostenstellen" …). */
+  .lbl {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-mute);
+  }
+  .card {
+    @apply text-ink;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 text-xs;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  /* Segmented Control (z. B. Admin-Tabs). */
+  .seg {
+    @apply flex gap-1 p-1;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .seg-item {
+    @apply flex-1 py-1.5 text-center;
+    color: var(--color-mute);
+  }
+  .seg-item.on {
+    background: var(--color-ink);
+    color: #000;
+  }
+  /* Seitentitel: VT323, gross, uppercase (Spinnplan .page-title). */
+  .page-title {
+    font-family: var(--cond);
+    font-size: 2rem;
+    font-weight: 400;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-ink);
+  }
+  /* Modal-Titel: VT323, uppercase (Spinnplan .modal-h). */
+  .modal-title {
+    font-family: var(--cond);
+    font-size: 1.4rem;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-ink);
+  }
+  /* Fehlerbox. */
+  .err-box {
+    @apply px-3 py-2 text-sm;
+    background: var(--color-terra-light);
+    border: 1px solid #5a231e;
+    color: #ff8a80;
+  }
+  /* Datum-Badge auf Anlass-Karten. */
+  .date-badge {
+    @apply flex w-14 flex-col items-center py-1.5;
+    background: #000;
+    border: 1px solid var(--color-line2);
+  }
+  .date-badge-day {
+    font-family: var(--cond);
+    font-size: 1.6rem;
+    line-height: 1;
+    color: var(--color-accent);
+  }
+  .date-badge-month {
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-dim);
+  }
+  /* Zähler-Badge (offene Todos). */
+  .count-badge {
+    @apply grid h-6 min-w-6 shrink-0 place-items-center px-1.5 text-xs leading-none;
+    font-family: var(--mono);
+    background: var(--color-terra);
+    color: #fff;
+  }
+  .quick-icon {
+    @apply grid h-9 w-9 shrink-0 place-items-center;
+    background: #000;
+    border: 1px solid var(--color-line2);
+    color: var(--color-accent);
+  }
+  .row-hover {
+    @apply transition-colors;
+  }
+  .row-hover:hover,
+  .row-hover:active {
+    background: var(--color-surface2);
+  }
+}
+
+/* Protokoll-Vorschau (Markdown). */
+.prose-protocol h1 { @apply mb-2 mt-3 text-lg font-bold; }
+.prose-protocol h2 { @apply mb-1.5 mt-3 text-base font-bold; }
+.prose-protocol h3, .prose-protocol h4 { @apply mb-1 mt-2 font-semibold; }
+.prose-protocol p { @apply my-1.5; }
+.prose-protocol ul { @apply my-1.5 list-disc pl-5; }
+.prose-protocol li { @apply my-0.5; }
+.prose-protocol code { @apply px-1 py-0.5 text-[0.85em]; background: var(--color-surface2); }
+.prose-protocol strong { @apply font-semibold; }

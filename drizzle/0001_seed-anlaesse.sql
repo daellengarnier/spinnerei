@@ -1,4 +1,4 @@
--- Seed: Anlässe Herbst/Winter 2026 (aus der Google-Drive-Ordnerstruktur)
+-- Custom SQL migration file, put your code below! ---- Seed: Anlässe Herbst/Winter 2026 (aus der Google-Drive-Ordnerstruktur)
 INSERT INTO "anlaesse" ("slug", "name", "datum") VALUES
 	('hausfest', 'Hausfest', '2026-09-05'),
 	('to-yo-natali', 'TÔ YÔ & Natalí', '2026-10-09'),

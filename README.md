@@ -2,17 +2,32 @@
 
 Organisations-App der Spinnerei. Läuft auf https://spinnerei.al-daellen.ch.
 
+Basierend auf der **hausfest26**-App (gleiche Grundstruktur, eine Ebene
+höher: mehrere Anlässe), Design 1:1 von der **Spinnplan**-App übernommen
+(Industrial-Dark, Barlow / Share Tech Mono / VT323, Gold-Akzent).
+
 ## Struktur
 
-- **Startseite**: Übersicht aller Anlässe (kommende + vergangene), chronologisch sortiert
-- **Pro Anlass** (`/anlass/[slug]`) drei Bereiche als Tabs:
-  - **Aufgaben** — To-do-Liste mit Zuständigkeit, abhaken & löschen
-  - **Schichtplan** — Schichten (Bereich, Zeit, Plätze) anlegen, Helfer*innen tragen sich mit Namen ein
-  - **Infos** — Pinnwand für Notizen, Beschlüsse und Infos
+- **Startseite**: alle Anlässe (kommende + vergangene), chronologisch;
+  Admins legen neue Anlässe direkt hier an
+- **Pro Anlass** (`/anlass/[id]`): gleiche Struktur wie die Hausfest-App,
+  ohne Programm-Übersicht:
+  - **Ressorts** → Sub-Ressorts → **Todos** → Diskussion (@Mentions),
+    Pinnwand pro Ressort; Spezial-Ressorts: **Acts** (Bands/DJs mit Rider,
+    Gagen, Übernachtung) und **Finanzen** (Ausgaben, Belege, Budget)
+  - **Sitzungen**: Doodle-Verfügbarkeit, Termin fixieren, Protokoll (Markdown)
+  - **Einkauf**: Einkaufsliste je Ressort
+- **Global** (ein Login für alle Anlässe): **Meine Sachen**, **Inbox**
+  (Mentions, Zuweisungen, Kommentare, Sitzungen), **Admin**
+  (Accounts + Ressorts), PWA mit Web-Push
 
-Die Anlässe (Herbst/Winter 2026) werden per Seed-Migration angelegt
-(`drizzle/0001_seed-anlaesse.sql`). Neue Anlässe: aktuell direkt per SQL/DB —
-eine Verwaltungs-UI kann später dazukommen.
+Accounts: Jede:r registriert sich selbst (`/register`); der erste Account
+wird automatisch Admin. Optional: `REGISTRATION_CODE` (Einladungscode) und
+`ADMIN_EMAILS` als Env-Variablen.
+
+Die Anlässe Herbst/Winter 2026 werden per Migration geseedet
+(`drizzle/0001_seed-anlaesse.sql`), die Start-Ressorts pro Anlass beim
+ersten Start über `scripts/seed.mjs` (idempotent).
 
 ## Stack
 
