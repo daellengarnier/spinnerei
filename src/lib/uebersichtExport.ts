@@ -24,77 +24,144 @@ export interface UebersichtAnlass {
   acts: UebersichtAct[];
 }
 
-// PDF der Saison-Übersicht — clientseitig mit jsPDF (Standard-Helvetica).
+// PDF der Saison-Übersicht im App-Stil: dunkler Grund, Karten,
+// Gold-Akzente, Uppercase-Titel (clientseitig mit jsPDF, Helvetica).
 export async function pdfHerunterladen(anlaesse: UebersichtAnlass[]) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const links = 20;
-  const rechts = 190;
-  let y = 22;
 
+  const GOLD: [number, number, number] = [201, 168, 76];
+  const INK: [number, number, number] = [240, 240, 240];
+  const DIM: [number, number, number] = [153, 153, 153];
+  const BG: [number, number, number] = [10, 10, 10];
+  const KARTE: [number, number, number] = [20, 20, 20];
+  const LINIE: [number, number, number] = [42, 42, 42];
+
+  const links = 14;
+  const rechts = 196;
+  const breite = rechts - links;
+  let y = 0;
+
+  const seiteFuellen = () => {
+    doc.setFillColor(...BG);
+    doc.rect(0, 0, 210, 297, "F");
+  };
   const neueSeiteFalls = (platz: number) => {
-    if (y + platz > 280) {
+    if (y + platz > 285) {
       doc.addPage();
-      y = 22;
+      seiteFuellen();
+      y = 16;
     }
   };
 
+  seiteFuellen();
+  y = 20;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text("Spinnerei — Übersicht alle Anlässe", links, y);
-  y += 6;
+  doc.setFontSize(8);
+  doc.setTextColor(...DIM);
+  doc.setCharSpace(1.2);
+  doc.text("SPINNEREI — ORGA", links, y);
+  doc.setCharSpace(0);
+  y += 8;
+  doc.setFontSize(19);
+  doc.setTextColor(...INK);
+  doc.text("ÜBERSICHT ALLE ANLÄSSE", links, y);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(120);
-  doc.text(`Stand: ${new Date().toLocaleDateString("de-CH")}`, links, y);
-  doc.setTextColor(0);
-  y += 10;
+  doc.setFontSize(8);
+  doc.setTextColor(...DIM);
+  doc.text(`Stand: ${new Date().toLocaleDateString("de-CH")}`, rechts, y, { align: "right" });
+  y += 8;
 
   for (const a of anlaesse) {
-    neueSeiteFalls(24);
-    doc.setDrawColor(180);
-    doc.line(links, y - 4, rechts, y - 4);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(13);
-    doc.text(a.name, links, y);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    const zugangLabel = a.zugang === "privat" ? "Privat" : a.zugang === "oeffentlich" ? "Öffentlich" : "";
-    const kopfInfos = [formatDate(a.datum), a.art, a.stichwort, zugangLabel].filter(Boolean).join("  ·  ");
-    y += 5.5;
-    doc.text(kopfInfos, links, y);
-
+    const zugangLabel = a.zugang === "privat" ? "PRIVAT" : a.zugang === "oeffentlich" ? "ÖFFENTLICH" : "";
+    const chips = [a.art?.toUpperCase(), a.stichwort?.toUpperCase(), zugangLabel].filter(Boolean) as string[];
     const zeiten = [
       a.tueroeffnung && `Türöffnung ${a.tueroeffnung}`,
       a.essen && `Essen ${a.essen}`,
       a.ende && `Ende ${a.ende}${istFolgetag(a.tueroeffnung, a.ende) ? " (Folgetag)" : ""}`,
-    ].filter(Boolean);
-    if (zeiten.length > 0) {
-      y += 5;
-      doc.setTextColor(100);
-      doc.text(zeiten.join("  ·  "), links, y);
-      doc.setTextColor(0);
+      a.petzilink && "Petzi vorhanden",
+    ].filter(Boolean) as string[];
+
+    // Kartenhöhe vorausberechnen: Kopf 14, Zeitenzeile 6, Acts (Trennlinie 3 + n·6), Abschluss 4.
+    const hoehe = 14 + (zeiten.length > 0 ? 6 : 0) + (a.acts.length > 0 ? 4 + a.acts.length * 6 : 0) + 4;
+    neueSeiteFalls(hoehe + 5);
+
+    // Karte
+    doc.setFillColor(...KARTE);
+    doc.setDrawColor(...LINIE);
+    doc.rect(links, y, breite, hoehe, "FD");
+
+    // Gold-Marker + Name
+    let cy = y + 9;
+    doc.setFillColor(...GOLD);
+    doc.rect(links + 5, cy - 4.2, 1.6, 5.2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12.5);
+    doc.setTextColor(...INK);
+    doc.setCharSpace(0.4);
+    doc.text(a.name.toUpperCase(), links + 9.5, cy);
+    doc.setCharSpace(0);
+
+    // Chips rechts vom Namen? Platzsparend: Chips rechtsbündig auf Kopfzeile.
+    if (chips.length > 0) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(6.5);
+      let cx = rechts - 5;
+      for (const chip of [...chips].reverse()) {
+        const w = doc.getTextWidth(chip) + 4;
+        cx -= w;
+        doc.setFillColor(...LINIE);
+        doc.rect(cx, cy - 3.6, w, 5, "F");
+        doc.setTextColor(...(chip === a.stichwort?.toUpperCase() ? GOLD : DIM));
+        doc.text(chip, cx + 2, cy - 0.2);
+        cx -= 2;
+      }
     }
 
+    // Datum
+    cy += 5.5;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...DIM);
+    doc.text(formatDate(a.datum), links + 9.5, cy);
+
+    // Zeiten
+    if (zeiten.length > 0) {
+      cy += 6;
+      doc.setFontSize(8.5);
+      doc.setTextColor(...DIM);
+      doc.text(zeiten.join("   ·   "), links + 9.5, cy);
+    }
+
+    // Acts
     if (a.acts.length > 0) {
-      y += 3;
+      cy += 3.5;
+      doc.setDrawColor(...LINIE);
+      doc.line(links + 5, cy, rechts - 5, cy);
       for (const act of a.acts) {
-        neueSeiteFalls(6);
-        y += 5;
+        cy += 6;
+        doc.setFontSize(9.5);
+        let ax = links + 9.5;
+        if (act.showtime) {
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(...GOLD);
+          doc.text(act.showtime, ax, cy);
+          ax += doc.getTextWidth(act.showtime) + 3;
+        }
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(10);
-        const zeit = act.showtime ? `${act.showtime}  ` : "";
-        doc.text(`${zeit}${act.name || "Unbenannter Act"}`, links + 4, y);
+        doc.setTextColor(...INK);
+        doc.text(act.name || "Unbenannter Act", ax, cy);
         const detail = [act.genre, act.herkunft].filter(Boolean).join(" · ");
         if (detail) {
           doc.setFont("helvetica", "normal");
-          doc.setTextColor(100);
-          doc.text(detail, rechts, y, { align: "right" });
-          doc.setTextColor(0);
+          doc.setFontSize(8.5);
+          doc.setTextColor(...DIM);
+          doc.text(detail, rechts - 5, cy, { align: "right" });
         }
       }
     }
-    y += 10;
+
+    y += hoehe + 4;
   }
 
   doc.save(`Spinnerei_Anlaesse_${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -112,7 +179,7 @@ const icsZeit = (datum: string, zeit: string, plusTage = 0) => {
 };
 
 // Alle Anlässe als Kalenderdatei (.ics) — Zeiten als lokale Zeit (Schweiz).
-export function icsHerunterladen(anlaesse: UebersichtAnlass[]) {
+export function icsHerunterladen(anlaesse: UebersichtAnlass[], dateiname = "Spinnerei_Anlaesse.ics") {
   const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
   const zeilen: string[] = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Spinnerei//Orga//DE", "CALSCALE:GREGORIAN"];
   for (const a of anlaesse) {
@@ -142,7 +209,7 @@ export function icsHerunterladen(anlaesse: UebersichtAnlass[]) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "Spinnerei_Anlaesse.ics";
+  link.download = dateiname;
   link.click();
   URL.revokeObjectURL(url);
 }

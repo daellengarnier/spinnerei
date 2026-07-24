@@ -261,6 +261,13 @@ body {
     line-height: 1;
     color: var(--color-accent);
   }
+  .date-badge-weekday {
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-ink);
+  }
   .date-badge-month {
     font-family: var(--mono);
     font-size: 0.55rem;
