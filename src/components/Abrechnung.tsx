@@ -113,7 +113,7 @@ export function Abrechnung({ anlassId }: { anlassId: number }) {
         <Zeile label="Total" wert={b.sumupTotalCents} fett />
       </Block>
 
-      <Block titel="Abendkasse (oben)">
+      <Block titel="Abendkasse (Eingang)">
         <Zeile label="Anfangsstock">
           <ChfInput wert={daten.akAnfangCents} onSave={(v) => speichern({ akAnfangCents: v })} />
         </Zeile>
@@ -133,7 +133,7 @@ export function Abrechnung({ anlassId }: { anlassId: number }) {
         )}
       </Block>
 
-      <Block titel="Bareinnahmen Bar (unten)">
+      <Block titel="Bar">
         <Zeile label="Anfangsstock">
           <ChfInput wert={daten.barAnfangCents} onSave={(v) => speichern({ barAnfangCents: v })} />
         </Zeile>
@@ -201,7 +201,7 @@ export function Abrechnung({ anlassId }: { anlassId: number }) {
 function Block({ titel, children }: { titel: string; children: React.ReactNode }) {
   return (
     <div className="card space-y-1.5 p-4">
-      <h3 className="lbl mb-1">{titel}</h3>
+      <h3 className="block-title mb-2">{titel}</h3>
       {children}
     </div>
   );

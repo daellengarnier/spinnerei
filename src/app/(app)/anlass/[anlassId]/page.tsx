@@ -158,7 +158,7 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
 
   return (
     <section className="card p-3.5">
-      <h2 className="lbl mb-2.5">Anlassübersicht</h2>
+      <h2 className="block-title mb-2.5">Anlassübersicht</h2>
 
       {fehlend.length > 0 && (
         <p className="mb-2.5 border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-xs text-accent">
