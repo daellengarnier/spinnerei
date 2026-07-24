@@ -186,7 +186,9 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
                 </button>
               )}
             </p>
-            {detail?.art && <p className="mt-0.5 truncate text-xs text-mute">{detail.art}</p>}
+            {(detail?.art || zugangLabel) && (
+              <p className="mt-0.5 truncate text-xs text-mute">{[detail?.art, zugangLabel].filter(Boolean).join(" · ")}</p>
+            )}
           </div>
           {anlass.openTodos > 0 && (
             <span className="count-badge" title={`${anlass.openTodos} offene Todos`}>
@@ -207,10 +209,9 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
         <div className="border-t border-line px-3.5 pb-3.5 pt-2.5">
           {detail ? (
             <>
-              {(detail.stichwort || zugangLabel) && (
+              {detail.stichwort && (
                 <div className="flex flex-wrap gap-1.5">
-                  {detail.stichwort && <span className="chip bg-accent/10 text-accent">{detail.stichwort}</span>}
-                  {zugangLabel && <span className="chip bg-surface2 text-dim">{zugangLabel}</span>}
+                  <span className="chip bg-accent/10 text-accent">{detail.stichwort}</span>
                 </div>
               )}
               {(detail.tueroeffnung || detail.essen || detail.ende || detail.petzilink) && (
