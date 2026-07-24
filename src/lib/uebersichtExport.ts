@@ -26,9 +26,23 @@ export interface UebersichtAnlass {
 
 // PDF der Saison-Übersicht im App-Stil: dunkler Grund, Karten,
 // Gold-Akzente, Uppercase-Titel (clientseitig mit jsPDF, Helvetica).
+// Unicode-Schrift einbetten (Liberation Sans, Helvetica-kompatibel) — die
+// eingebaute Helvetica kann kein Latin Extended (z. B. Ō in «TŌ YŌ»).
+async function ladeFont(doc: { addFileToVFS: (n: string, d: string) => void; addFont: (f: string, n: string, s: string) => void }, datei: string, stil: "normal" | "bold") {
+  const res = await fetch(`/fonts/${datei}`);
+  const buf = await res.arrayBuffer();
+  let bin = "";
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  doc.addFileToVFS(datei, btoa(bin));
+  doc.addFont(datei, "Sans", stil);
+}
+
 export async function pdfHerunterladen(anlaesse: UebersichtAnlass[]) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
+  await ladeFont(doc, "LiberationSans-Regular.ttf", "normal");
+  await ladeFont(doc, "LiberationSans-Bold.ttf", "bold");
 
   const GOLD: [number, number, number] = [201, 168, 76];
   const INK: [number, number, number] = [240, 240, 240];
@@ -56,7 +70,7 @@ export async function pdfHerunterladen(anlaesse: UebersichtAnlass[]) {
 
   seiteFuellen();
   y = 20;
-  doc.setFont("helvetica", "bold");
+  doc.setFont("Sans", "bold");
   doc.setFontSize(8);
   doc.setTextColor(...DIM);
   doc.setCharSpace(1.2);
@@ -66,7 +80,7 @@ export async function pdfHerunterladen(anlaesse: UebersichtAnlass[]) {
   doc.setFontSize(19);
   doc.setTextColor(...INK);
   doc.text("ÜBERSICHT ALLE ANLÄSSE", links, y);
-  doc.setFont("helvetica", "normal");
+  doc.setFont("Sans", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...DIM);
   doc.text(`Stand: ${new Date().toLocaleDateString("de-CH")}`, rechts, y, { align: "right" });
@@ -95,7 +109,7 @@ export async function pdfHerunterladen(anlaesse: UebersichtAnlass[]) {
     let cy = y + 9;
     doc.setFillColor(...GOLD);
     doc.rect(links + 5, cy - 4.2, 1.6, 5.2, "F");
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Sans", "bold");
     doc.setFontSize(12.5);
     doc.setTextColor(...INK);
     doc.setCharSpace(0.4);
@@ -104,7 +118,7 @@ export async function pdfHerunterladen(anlaesse: UebersichtAnlass[]) {
 
     // Chips rechts vom Namen? Platzsparend: Chips rechtsbündig auf Kopfzeile.
     if (chips.length > 0) {
-      doc.setFont("helvetica", "bold");
+      doc.setFont("Sans", "bold");
       doc.setFontSize(6.5);
       let cx = rechts - 5;
       for (const chip of [...chips].reverse()) {
@@ -120,7 +134,7 @@ export async function pdfHerunterladen(anlaesse: UebersichtAnlass[]) {
 
     // Datum
     cy += 5.5;
-    doc.setFont("helvetica", "normal");
+    doc.setFont("Sans", "normal");
     doc.setFontSize(9);
     doc.setTextColor(...DIM);
     doc.text(formatDate(a.datum), links + 9.5, cy);
@@ -143,17 +157,17 @@ export async function pdfHerunterladen(anlaesse: UebersichtAnlass[]) {
         doc.setFontSize(9.5);
         let ax = links + 9.5;
         if (act.showtime) {
-          doc.setFont("helvetica", "bold");
+          doc.setFont("Sans", "bold");
           doc.setTextColor(...GOLD);
           doc.text(act.showtime, ax, cy);
           ax += doc.getTextWidth(act.showtime) + 3;
         }
-        doc.setFont("helvetica", "bold");
+        doc.setFont("Sans", "bold");
         doc.setTextColor(...INK);
         doc.text(act.name || "Unbenannter Act", ax, cy);
         const detail = [act.genre, act.herkunft].filter(Boolean).join(" · ");
         if (detail) {
-          doc.setFont("helvetica", "normal");
+          doc.setFont("Sans", "normal");
           doc.setFontSize(8.5);
           doc.setTextColor(...DIM);
           doc.text(detail, rechts - 5, cy, { align: "right" });
