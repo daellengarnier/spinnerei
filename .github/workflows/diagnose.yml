@@ -1,0 +1,35 @@
+# Manuell auslösbare Diagnose: Zustand von App-Container & Reverse-Proxy
+# auf dem VPS prüfen (nur lesend).
+name: Diagnose VPS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Diagnose via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -uo pipefail
+            echo "=== docker ps ==="
+            docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+            echo "=== spinnerei-app logs (letzte 60 Zeilen) ==="
+            docker logs --tail 60 spinnerei-app 2>&1 || true
+            echo "=== App intern erreichbar? ==="
+            docker run --rm --network proxy curlimages/curl:8.10.1 -sS -o /dev/null -w "spinnerei-app:3000 -> %{http_code}\n" http://spinnerei-app:3000/login || true
+            echo "=== Caddy-Container suchen ==="
+            docker ps --format '{{.Names}} {{.Image}}' | grep -i caddy || echo "kein Caddy-Container gefunden"
+            echo "=== Caddy-Konfig: spinnerei erwähnt? ==="
+            for f in /opt/ambardaellen/Caddyfile /opt/ambardaellen/caddy/Caddyfile /opt/ambardaellen/deploy/Caddyfile; do
+              if [ -f "$f" ]; then echo "--- $f ---"; grep -n -A 4 -i "spinnerei\|hausfest" "$f" || echo "(kein spinnerei/hausfest-Eintrag)"; fi
+            done
+            find /opt -maxdepth 3 -name "Caddyfile" 2>/dev/null || true
+            echo "=== Netzwerk proxy: Mitglieder ==="
+            docker network inspect proxy --format '{{range .Containers}}{{.Name}} {{end}}' || true
