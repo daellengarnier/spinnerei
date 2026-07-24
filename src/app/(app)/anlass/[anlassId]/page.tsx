@@ -9,7 +9,7 @@ import { Icon } from "@/components/Icon";
 import { ressortIcon } from "@/lib/ressortIcon";
 import { ressortHint } from "@/lib/ressortHint";
 import { useAuth } from "@/components/AuthContext";
-import { formatDate } from "@/lib/uiUtil";
+import { formatDate, istFolgetag } from "@/lib/uiUtil";
 import type { RessortSummary } from "@/lib/uiTypes";
 
 interface Anlass {
@@ -188,7 +188,10 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
       <div className="grid grid-cols-3 gap-2">
         {ZEIT_FELDER.map((f) => (
           <div key={f.key}>
-            <label className="label text-xs">{f.label}</label>
+            <label className="label text-xs">
+              {f.label}
+              {f.key === "ende" && istFolgetag(werte.tueroeffnung, werte.ende) && <span className="text-accent"> (Folgetag)</span>}
+            </label>
             <input
               type="time"
               className="input px-2 py-1.5 text-sm"

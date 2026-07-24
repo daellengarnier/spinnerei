@@ -50,6 +50,13 @@
       "when": 1784917385872,
       "tag": "0006_married_the_call",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784924010416,
+      "tag": "0007_licht-ton-trennen",
+      "breakpoints": true
     }
   ]
 }

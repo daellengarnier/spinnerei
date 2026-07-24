@@ -65,3 +65,9 @@ export function isOverdue(fristDatum: string | null, status: TodoStatus): boolea
   const d = new Date(fristDatum + "T23:59:59");
   return d.getTime() < Date.now();
 }
+
+// Ende vor der Türöffnung (z. B. 03:30) = Anlass endet am Folgetag.
+export function istFolgetag(tueroeffnung: string, ende: string): boolean {
+  if (!ende) return false;
+  return tueroeffnung ? ende <= tueroeffnung : ende < "12:00";
+}

@@ -8,7 +8,7 @@ import Link from "next/link";
 import { api } from "@/lib/apiClient";
 import { EmptyState, Spinner } from "@/components/Ui";
 import { Icon } from "@/components/Icon";
-import { formatDate } from "@/lib/uiUtil";
+import { formatDate, istFolgetag } from "@/lib/uiUtil";
 
 interface UebersichtAct {
   name: string;
@@ -70,7 +70,12 @@ export default function SaisonUebersicht() {
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-dim">
                 {a.tueroeffnung && <span>Türöffnung {a.tueroeffnung}</span>}
                 {a.essen && <span>Essen {a.essen}</span>}
-                {a.ende && <span>Ende {a.ende}</span>}
+                {a.ende && (
+                  <span>
+                    Ende {a.ende}
+                    {istFolgetag(a.tueroeffnung, a.ende) && " (Folgetag)"}
+                  </span>
+                )}
                 {a.petzilink && (
                   <a href={a.petzilink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-accent">
                     <Icon name="send" size={11} /> Petzi
