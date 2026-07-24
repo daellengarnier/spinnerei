@@ -1,0 +1,52 @@
+# docker-compose.yml — liegt auf dem VPS unter /opt/spinnerei/docker-compose.yml
+#
+# Image kommt aus GHCR (gebaut vom GitHub-Actions-Workflow).
+# Auf dem VPS: .env mit POSTGRES_PASSWORD (siehe .env.example).
+#
+# Reverse-Proxy (Caddy) läuft zentral im /opt/ambardaellen/-Stack und
+# proxiet spinnerei.al-daellen.ch → spinnerei-app:3000 über das externe
+# Docker-Netzwerk `proxy`.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: spinnerei-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-spinnerei}
+      POSTGRES_USER: ${POSTGRES_USER:-spinnerei}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD muss in .env gesetzt sein}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-spinnerei} -d ${POSTGRES_DB:-spinnerei}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  app:
+    image: ghcr.io/daellengarnier/spinnerei:latest
+    container_name: spinnerei-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      DATABASE_URL: postgres://${POSTGRES_USER:-spinnerei}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-spinnerei}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+      - proxy
+
+networks:
+  internal:
+    driver: bridge
+  proxy:
+    external: true
+
+volumes:
+  db-data:
