@@ -1,0 +1,146 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { api } from "@/lib/apiClient";
+import { Spinner, EmptyState } from "@/components/Ui";
+import { Icon } from "@/components/Icon";
+import type { ShoppingGroup, ShoppingItem } from "@/lib/uiTypes";
+
+export default function EinkaufPage() {
+  const params = useParams<{ anlassId: string }>();
+  const anlassId = Number(params.anlassId);
+  const [groups, setGroups] = useState<ShoppingGroup[] | null>(null);
+  const [open, setOpen] = useState<Record<number, boolean>>({});
+
+  const load = () => api.get<{ ressorts: ShoppingGroup[] }>(`/shopping?anlass=${anlassId}`).then((d) => setGroups(d.ressorts));
+  useEffect(() => {
+    if (anlassId) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anlassId]);
+
+  const totalOffen = (groups ?? []).reduce((s, g) => s + g.items.filter((i) => !i.erledigt).length, 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="px-1 pt-1">
+        <Link href={`/anlass/${anlassId}`} className="text-sm text-mute">
+          ← Anlass
+        </Link>
+        <h1 className="page-title mt-1">Einkaufsliste</h1>
+        <p className="mt-0.5 text-sm text-dim">
+          {totalOffen > 0 ? `${totalOffen} Artikel offen – aufklappbar pro Ressort` : "Artikel je Ressort erfassen"}
+        </p>
+      </div>
+
+      {groups === null ? (
+        <Spinner label="Lade Einkaufsliste …" />
+      ) : groups.length === 0 ? (
+        <EmptyState title="Keine Ressorts" hint="Sobald Ressorts existieren, kannst du hier einkaufen." />
+      ) : (
+        <div className="space-y-2">
+          {groups.map((g) => {
+            const offen = g.items.filter((i) => !i.erledigt).length;
+            const isOpen = open[g.id];
+            return (
+              <div key={g.id} className="card overflow-hidden">
+                <button className="flex w-full items-center gap-2.5 px-3 py-3 text-left" onClick={() => setOpen((o) => ({ ...o, [g.id]: !o[g.id] }))}>
+                  <Icon name="chevron" size={16} className={`shrink-0 text-dim transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: g.farbe }} />
+                  <span className="flex-1 truncate font-semibold text-ink">{g.name}</span>
+                  {offen > 0 ? (
+                    <span className="chip shrink-0" style={{ background: `${g.farbe}1c`, color: g.farbe }}>
+                      {offen}
+                    </span>
+                  ) : (
+                    g.items.length > 0 && <Icon name="check" size={16} className="shrink-0 text-accent" />
+                  )}
+                </button>
+                {isOpen && (
+                  <div className="border-t border-line">
+                    <Section groupId={g.id} items={g.items} onChanged={load} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Section({
+  groupId,
+  items,
+  onChanged,
+}: {
+  groupId: number;
+  items: ShoppingItem[];
+  onChanged: () => void;
+}) {
+  const [titel, setTitel] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const add = async () => {
+    if (!titel.trim() || busy) return;
+    setBusy(true);
+    try {
+      await api.post("/shopping", { ressortId: groupId, titel: titel.trim() });
+      setTitel("");
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="px-1 py-1">
+        {items.map((it) => (
+          <ItemRow key={it.id} item={it} onChanged={onChanged} />
+        ))}
+      </div>
+      <div className="flex items-center gap-2 px-3 pb-3">
+        <input
+          className="input flex-1 py-2 text-sm"
+          value={titel}
+          onChange={(e) => setTitel(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && add()}
+          placeholder="Artikel hinzufügen …"
+        />
+        <button className="btn-primary shrink-0 px-3 py-2" onClick={add} disabled={busy || !titel.trim()} aria-label="Hinzufügen">
+          <Icon name="plus" size={16} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ItemRow({ item, onChanged }: { item: ShoppingItem; onChanged: () => void }) {
+  const toggle = async () => {
+    await api.patch(`/shopping/${item.id}`, { erledigt: !item.erledigt });
+    onChanged();
+  };
+  const remove = async () => {
+    await api.del(`/shopping/${item.id}`);
+    onChanged();
+  };
+  return (
+    <div className="flex items-center gap-2.5  px-2 py-1.5 active:bg-surface2">
+      <button onClick={toggle} className="shrink-0" aria-label={item.erledigt ? "Als offen markieren" : "Als erledigt markieren"}>
+        <span className={`grid h-5 w-5 place-items-center rounded-full border-2 ${item.erledigt ? "border-accent bg-accent text-white" : "border-line2 text-transparent"}`}>
+          <Icon name="check" size={12} />
+        </span>
+      </button>
+      <span className={`flex-1 truncate text-sm ${item.erledigt ? "text-dim line-through" : "text-ink"}`}>
+        {item.titel}
+        {item.menge && <span className="ml-1.5 text-xs text-dim">{item.menge}</span>}
+      </span>
+      <button onClick={remove} className="shrink-0  p-1 text-mute hover:bg-terra-light hover:text-red-500" aria-label="Löschen">
+        <Icon name="trash" size={15} />
+      </button>
+    </div>
+  );
+}

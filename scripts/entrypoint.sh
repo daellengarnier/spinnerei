@@ -12,4 +12,9 @@ until node /app/scripts/migrate.mjs; do
   sleep 2
 done
 
+# Seed-Daten beim ersten Start anlegen (idempotent).
+if [ "${SEED_ON_START:-true}" != "false" ]; then
+  node /app/scripts/seed.mjs || echo "[entrypoint] Seed übersprungen/fehlgeschlagen (nicht kritisch)."
+fi
+
 exec "$@"
