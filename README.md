@@ -2,6 +2,18 @@
 
 Organisations-App der Spinnerei. Läuft auf https://spinnerei.al-daellen.ch.
 
+## Struktur
+
+- **Startseite**: Übersicht aller Anlässe (kommende + vergangene), chronologisch sortiert
+- **Pro Anlass** (`/anlass/[slug]`) drei Bereiche als Tabs:
+  - **Aufgaben** — To-do-Liste mit Zuständigkeit, abhaken & löschen
+  - **Schichtplan** — Schichten (Bereich, Zeit, Plätze) anlegen, Helfer*innen tragen sich mit Namen ein
+  - **Infos** — Pinnwand für Notizen, Beschlüsse und Infos
+
+Die Anlässe (Herbst/Winter 2026) werden per Seed-Migration angelegt
+(`drizzle/0001_seed-anlaesse.sql`). Neue Anlässe: aktuell direkt per SQL/DB —
+eine Verwaltungs-UI kann später dazukommen.
+
 ## Stack
 
 - **Next.js 16** (App Router, Standalone Output) + **React 19**
