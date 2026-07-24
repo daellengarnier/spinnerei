@@ -7,5 +7,5 @@ INSERT INTO "anlaesse" ("slug", "name", "datum") VALUES
 	('jugendsession', 'Jugendsession', '2026-11-06'),
 	('kitchen', 'Kitchen', '2026-11-07'),
 	('artlu-bubble', 'Artlu Bubble and the Dead Animal Gang', '2026-11-14'),
-	('mothers-cake', 'Mothers Cake &', '2026-12-12')
+	('mothers-cake', 'Mothers Cake & Fancy and the Boys', '2026-12-12')
 ON CONFLICT ("slug") DO NOTHING;
