@@ -6,6 +6,7 @@ import { api } from "@/lib/apiClient";
 import { EmptyState, Modal, Spinner } from "@/components/Ui";
 import { Icon } from "@/components/Icon";
 import { useAuth } from "@/components/AuthContext";
+import { SaisonUebersicht } from "@/components/SaisonUebersicht";
 import { formatDate } from "@/lib/uiUtil";
 
 interface AnlassSummary {
@@ -44,6 +45,7 @@ export default function AnlaesseUebersicht() {
   const [error, setError] = useState("");
   const [hi, setHi] = useState("Hallo");
   const [createOpen, setCreateOpen] = useState(false);
+  const [uebersichtOpen, setUebersichtOpen] = useState(false);
 
   const load = () =>
     api
@@ -66,9 +68,9 @@ export default function AnlaesseUebersicht() {
           {hi}, <span className="brand-text">{user?.name}</span>
         </h1>
         <div className="mt-3 flex gap-2">
-          <Link href="/uebersicht" className="btn-ghost flex-1 py-1.5 text-sm">
+          <button className={`flex-1 py-1.5 text-sm ${uebersichtOpen ? "btn-primary" : "btn-ghost"}`} onClick={() => setUebersichtOpen((o) => !o)}>
             <Icon name="tasks" size={15} /> Übersicht
-          </Link>
+          </button>
           <a href="https://spinnplan-23.netlify.app" target="_blank" rel="noopener noreferrer" className="btn-ghost flex-1 py-1.5 text-sm">
             <Icon name="calendar" size={15} /> Spinnplan
           </a>
@@ -79,6 +81,13 @@ export default function AnlaesseUebersicht() {
           )}
         </div>
       </div>
+
+      {uebersichtOpen && (
+        <section>
+          <h2 className="lbl mb-2 px-1">Übersicht alle Anlässe</h2>
+          <SaisonUebersicht />
+        </section>
+      )}
 
       <section>
         <h2 className="lbl mb-2 px-1">Kommende Anlässe</h2>

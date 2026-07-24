@@ -108,7 +108,8 @@ async function pdfHerunterladen(anlaesse: UebersichtAnlass[]) {
   doc.save(`Spinnerei_Anlaesse_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
-export default function SaisonUebersicht() {
+// Ausklappbare Saison-Übersicht auf der Anlässe-Seite.
+export function SaisonUebersicht() {
   const [anlaesse, setAnlaesse] = useState<UebersichtAnlass[] | null>(null);
   const [error, setError] = useState("");
 
@@ -123,14 +124,7 @@ export default function SaisonUebersicht() {
   if (!anlaesse) return <Spinner label="Lade Übersicht …" />;
 
   return (
-    <div className="space-y-4">
-      <div className="px-1 pt-1">
-        <Link href="/" className="text-sm text-mute">
-          ← Anlässe
-        </Link>
-        <h1 className="page-title mt-1">Übersicht alle Anlässe</h1>
-      </div>
-
+    <div className="space-y-2.5">
       <button className="btn-ghost w-full py-1.5 text-sm" onClick={() => anlaesse.length > 0 && pdfHerunterladen(anlaesse)}>
         <Icon name="download" size={15} /> Als PDF herunterladen
       </button>
