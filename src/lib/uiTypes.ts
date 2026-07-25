@@ -38,6 +38,9 @@ export interface RessortSummary {
   totalTodos: number;
   nextMeeting: { id: number; titel: string; datum: string; startzeit: string } | null;
   lastActivity: string | null;
+  // HQ-Kacheln
+  naechsteSitzung?: { datum: string; startzeit: string } | null;
+  anfragenCount?: number;
 }
 
 export interface Ressort {

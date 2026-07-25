@@ -1,7 +1,8 @@
-import { sql, eq, and, ne, count, max, isNull } from "drizzle-orm";
+import { sql, eq, and, ne, count, max, isNull, gte, asc } from "drizzle-orm";
 import { requireUser, requireAdmin, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
-import { ressorts, ressortLeads, users, todos } from "@/lib/db/schema";
+import { bookingAnfragen, ressorts, ressortLeads, sitzungen, users, todos } from "@/lib/db/schema";
+import { heutePlusTage } from "@/lib/datum";
 
 async function leadsFor(ressortId: number) {
   return getDb()
@@ -54,6 +55,21 @@ export async function GET(request: Request) {
         ) x
       `);
 
+      // HQ-Kacheln: nächste Sitzung bzw. Anzahl Booking-Anfragen.
+      const naechsteSitzung = r.hatSitzungen
+        ? ((
+            await db
+              .select({ datum: sitzungen.datum, startzeit: sitzungen.startzeit })
+              .from(sitzungen)
+              .where(and(eq(sitzungen.ressortId, r.id), gte(sitzungen.datum, heutePlusTage(0))))
+              .orderBy(asc(sitzungen.datum), asc(sitzungen.startzeit))
+              .limit(1)
+          )[0] ?? null)
+        : null;
+      const anfragenCount = r.hatBooking
+        ? (await db.select({ c: count() }).from(bookingAnfragen).where(eq(bookingAnfragen.ressortId, r.id)))[0].c
+        : 0;
+
       return {
         ...r,
         leads: await leadsFor(r.id),
@@ -61,6 +77,8 @@ export async function GET(request: Request) {
         totalTodos: total[0].c,
         nextMeeting: nextMeetingRows[0] ?? null,
         lastActivity: lastActRows[0]?.ts ?? null,
+        naechsteSitzung,
+        anfragenCount,
       };
     }),
   );

@@ -6,10 +6,11 @@ import { api } from "@/lib/apiClient";
 import { Avatar, EmptyState, Spinner } from "@/components/Ui";
 import { Icon } from "@/components/Icon";
 import { ressortIcon } from "@/lib/ressortIcon";
+import { formatDate } from "@/lib/uiUtil";
 import type { RessortSummary } from "@/lib/uiTypes";
 
-// HQ (Headquarter): Vereinsressorts ohne Anlass-Bezug —
-// Sitzungen, Retraite, Revision, Booking.
+// HQ (Headquarter): Vereinsressorts als Kachel-Grid —
+// Sitzungen, Retraite, Infrastruktur, Booking.
 export default function HqPage() {
   const [ressorts, setRessorts] = useState<RessortSummary[] | null>(null);
   const [error, setError] = useState("");
@@ -35,40 +36,58 @@ export default function HqPage() {
       ) : ressorts.length === 0 ? (
         <EmptyState title="Noch keine Vereinsressorts" hint="Sie werden beim nächsten Deploy automatisch angelegt." />
       ) : (
-        <div className="card divide-y divide-line overflow-hidden">
+        <div className="grid grid-cols-2 gap-2.5">
           {ressorts.map((r) => (
-            <Link key={r.id} href={`/ressort/${r.id}`} className="row-hover flex items-center gap-3 px-3 py-2.5">
-              <span
-                className="grid h-9 w-9 shrink-0 place-items-center ring-1 ring-inset"
-                style={{ background: `${r.farbe}1c`, color: r.farbe, borderColor: `${r.farbe}3a` }}
-              >
-                <Icon name={ressortIcon(r.name)} size={19} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="min-w-0 truncate font-semibold text-ink">{r.name}</p>
-                  {r.leads.length > 0 && (
-                    <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-mute">
-                      {r.leads.map((l) => (
-                        <span key={l.id} className="inline-flex items-center gap-1">
-                          <Avatar name={l.name} color={l.avatarColor} size={14} userId={l.id} showName={false} />
-                          {l.name}
-                        </span>
-                      ))}
-                    </span>
-                  )}
-                </div>
-              </div>
-              {r.openTodos > 0 && (
-                <span className="count-badge" title={`${r.openTodos} offene Todos`}>
-                  {r.openTodos}
-                </span>
-              )}
-              <Icon name="chevron" size={16} className="shrink-0 text-mute" />
-            </Link>
+            <HqKachel key={r.id} ressort={r} />
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+// Was auf der Kachel steht: das, was im Ressort gerade zählt.
+function infoZeile(r: RessortSummary): string {
+  if (r.hatSitzungen) {
+    return r.naechsteSitzung
+      ? `Nächste: ${formatDate(r.naechsteSitzung.datum)}${r.naechsteSitzung.startzeit ? ` · ${r.naechsteSitzung.startzeit}` : ""}`
+      : "Keine Sitzung geplant";
+  }
+  if (r.hatBooking) {
+    return r.anfragenCount ? `${r.anfragenCount} ${r.anfragenCount === 1 ? "Anfrage" : "Anfragen"}` : "Keine Anfragen";
+  }
+  return r.openTodos ? `${r.openTodos} offene Todos` : "Nichts offen";
+}
+
+function HqKachel({ ressort: r }: { ressort: RessortSummary }) {
+  return (
+    <Link
+      href={`/ressort/${r.id}`}
+      className="card relative flex min-h-[8.5rem] flex-col justify-between gap-3 p-3.5 active:scale-[0.98]"
+      style={{ borderTop: `2px solid ${r.farbe}` }}
+    >
+      {r.openTodos > 0 && (
+        <span className="count-badge absolute right-2.5 top-2.5" title={`${r.openTodos} offene Todos`}>
+          {r.openTodos}
+        </span>
+      )}
+      <span
+        className="grid h-11 w-11 place-items-center ring-1 ring-inset"
+        style={{ background: `${r.farbe}1c`, color: r.farbe, borderColor: `${r.farbe}3a` }}
+      >
+        <Icon name={ressortIcon(r.name)} size={22} />
+      </span>
+      <div className="min-w-0">
+        <p className="truncate font-semibold text-ink">{r.name}</p>
+        <p className="mt-0.5 truncate text-xs text-dim">{infoZeile(r)}</p>
+        {r.leads.length > 0 && (
+          <div className="mt-2 flex items-center gap-1">
+            {r.leads.map((l) => (
+              <Avatar key={l.id} name={l.name} color={l.avatarColor} size={18} userId={l.id} showName={false} />
+            ))}
+          </div>
+        )}
+      </div>
+    </Link>
   );
 }
