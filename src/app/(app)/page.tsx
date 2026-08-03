@@ -208,6 +208,15 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
                   )}
                 </div>
               )}
+              {(detail.verantwortliche ?? []).length > 0 && (
+                <div className="mt-2.5 space-y-1 border-t border-line pt-2 text-xs">
+                  {detail.verantwortliche.map((v) => (
+                    <p key={v.ressort} className="text-dim">
+                      <span className="text-mute">{v.ressort}:</span> <span className="text-ink">{v.namen.join(", ")}</span>
+                    </p>
+                  ))}
+                </div>
+              )}
               {detail.acts.length > 0 && (
                 <div className="mt-2.5 space-y-1 border-t border-line pt-2">
                   {detail.acts.map((act, i) => (

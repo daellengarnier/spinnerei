@@ -96,6 +96,8 @@ export const ressorts = pgTable("ressorts", {
   hatSitzungen: boolean("hatSitzungen").notNull().default(false),
   // HQ-Ressort Booking: Anfragen/Ideen mit Stimmungsbild.
   hatBooking: boolean("hatBooking").notNull().default(false),
+  // Externe Verantwortliche ohne App-Konto (z. B. «Bäscht»), kommagetrennt.
+  externeLeads: text("externeLeads").notNull().default(""),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
 });
 

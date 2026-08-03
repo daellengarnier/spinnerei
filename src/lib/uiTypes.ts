@@ -33,6 +33,7 @@ export interface RessortSummary {
   hatFinanzen?: boolean;
   hatSitzungen?: boolean;
   hatBooking?: boolean;
+  externeLeads?: string;
   leads: UserLite[];
   openTodos: number;
   totalTodos: number;
@@ -55,6 +56,7 @@ export interface Ressort {
   hatActs?: boolean;
   hatSitzungen?: boolean;
   hatBooking?: boolean;
+  externeLeads?: string;
   leads: UserLite[];
 }
 

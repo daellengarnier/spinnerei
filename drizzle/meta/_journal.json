@@ -134,6 +134,13 @@
       "when": 1784935195880,
       "tag": "0018_free_wolfsbane",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1785781135134,
+      "tag": "0019_yummy_grandmaster",
+      "breakpoints": true
     }
   ]
 }

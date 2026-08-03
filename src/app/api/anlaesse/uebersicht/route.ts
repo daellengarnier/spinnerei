@@ -1,7 +1,7 @@
-import { asc, inArray } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { requireUser, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
-import { acts, anlaesse, ressorts, users } from "@/lib/db/schema";
+import { acts, anlaesse, ressortLeads, ressorts, users } from "@/lib/db/schema";
 
 // Saison-Übersicht: alle Anlässe mit Eckdaten (Datum, Art, Zeiten, Petzilink)
 // und ihren Acts (Genre, Herkunft, Showtime) — alles automatisch aus den
@@ -16,9 +16,24 @@ export async function GET() {
   const userName = new Map(alleUser.map((u) => [u.id, u.name]));
   const alleRessorts = alleAnlaesse.length
     ? await db
-        .select({ id: ressorts.id, anlassId: ressorts.anlassId })
+        .select({
+          id: ressorts.id,
+          anlassId: ressorts.anlassId,
+          name: ressorts.name,
+          reihenfolge: ressorts.reihenfolge,
+          externeLeads: ressorts.externeLeads,
+        })
         .from(ressorts)
         .where(inArray(ressorts.anlassId, alleAnlaesse.map((a) => a.id)))
+    : [];
+  // Verantwortliche pro Ressort (Mitglieder + Externe) für die Übersicht.
+  const alleLeads = alleRessorts.length
+    ? await db
+        .select({ ressortId: ressortLeads.ressortId, name: users.name })
+        .from(ressortLeads)
+        .innerJoin(users, eq(users.id, ressortLeads.userId))
+        .where(inArray(ressortLeads.ressortId, alleRessorts.map((r) => r.id)))
+        .orderBy(asc(users.name))
     : [];
   const ressortZuAnlass = new Map(alleRessorts.map((r) => [r.id, r.anlassId]));
   const alleActs = alleRessorts.length
@@ -60,6 +75,17 @@ export async function GET() {
       abendverantwortung: (a.abendverantwortungUserId && userName.get(a.abendverantwortungUserId)) || "",
       normaltarifCents: a.normaltarifCents,
       solitarifCents: a.solitarifCents,
+      verantwortliche: alleRessorts
+        .filter((r) => r.anlassId === a.id)
+        .sort((x, y) => x.reihenfolge - y.reihenfolge)
+        .map((r) => ({
+          ressort: r.name,
+          namen: [
+            ...alleLeads.filter((l) => l.ressortId === r.id).map((l) => l.name),
+            ...r.externeLeads.split(",").map((s) => s.trim()).filter(Boolean),
+          ],
+        }))
+        .filter((v) => v.namen.length > 0),
       acts: (actsProAnlass.get(a.id) ?? []).map((x) => ({
         name: x.name,
         typ: x.typ,

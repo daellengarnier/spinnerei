@@ -101,13 +101,22 @@ export default function RessortPage() {
         {ressort.beschreibung && <p className="mt-1 text-sm text-dim">{ressort.beschreibung}</p>}
         <div className="mt-2.5 flex flex-wrap items-center gap-2">
           <span className="text-xs text-dim">Verantwortlich:</span>
-          {ressort.leads.length === 0 && <span className="text-xs text-dim">—</span>}
+          {ressort.leads.length === 0 && !ressort.externeLeads && <span className="text-xs text-dim">—</span>}
           {ressort.leads.map((u) => (
             <span key={u.id} className="flex items-center gap-1.5 rounded-full bg-surface2 py-0.5 pl-0.5 pr-2.5 text-sm">
               <Avatar name={u.name} color={u.avatarColor} size={22} userId={u.id} />
               {u.name}
             </span>
           ))}
+          {(ressort.externeLeads ?? "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .map((name) => (
+              <span key={name} className="flex items-center gap-1.5 rounded-full border border-dashed border-line2 bg-surface2 px-2.5 py-0.5 text-sm">
+                {name}
+              </span>
+            ))}
           <button
             className="grid h-7 w-7 place-items-center rounded-full border border-line2 text-dim active:scale-95"
             onClick={() => setLeadsOpen(true)}
@@ -122,6 +131,7 @@ export default function RessortPage() {
         <LeadsModal
           ressortId={ressortId}
           initial={ressort.leads.map((u) => u.id)}
+          initialExtern={ressort.externeLeads ?? ""}
           onClose={() => setLeadsOpen(false)}
           onSaved={() => {
             setLeadsOpen(false);
@@ -404,22 +414,25 @@ function SubRessortModal({
 function LeadsModal({
   ressortId,
   initial,
+  initialExtern,
   onClose,
   onSaved,
 }: {
   ressortId: number;
   initial: number[];
+  initialExtern: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [selected, setSelected] = useState<number[]>(initial);
+  const [extern, setExtern] = useState(initialExtern);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const save = async () => {
     setSaving(true);
     setError("");
     try {
-      await api.patch(`/ressorts/${ressortId}`, { leadUserIds: selected });
+      await api.patch(`/ressorts/${ressortId}`, { leadUserIds: selected, externeLeads: extern });
       onSaved();
     } catch (e) {
       setError((e as Error).message);
@@ -443,8 +456,17 @@ function LeadsModal({
         </div>
       }
     >
-      <div className="space-y-2">
+      <div className="space-y-4">
         <AssigneePicker selected={selected} onChange={setSelected} />
+        <div>
+          <label className="label">Externe (ohne App-Konto)</label>
+          <input
+            className="input"
+            value={extern}
+            onChange={(e) => setExtern(e.target.value)}
+            placeholder="z. B. Bäscht — mehrere mit Komma trennen"
+          />
+        </div>
         {error && <p className="err-box">{error}</p>}
       </div>
     </Modal>

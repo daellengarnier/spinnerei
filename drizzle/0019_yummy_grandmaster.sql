@@ -1,0 +1,1 @@
+ALTER TABLE "ressorts" ADD COLUMN "externeLeads" text DEFAULT '' NOT NULL;

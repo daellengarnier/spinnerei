@@ -32,6 +32,8 @@ export interface UebersichtAnlass {
   abendverantwortung: string;
   normaltarifCents: number | null;
   solitarifCents: number | null;
+  // Verantwortliche pro Ressort (Mitglieder + Externe), nur besetzte Ressorts.
+  verantwortliche: { ressort: string; namen: string[] }[];
   acts: UebersichtAct[];
 }
 

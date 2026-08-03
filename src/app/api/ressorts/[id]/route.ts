@@ -82,7 +82,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
 
 export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const body = await request.json().catch(() => ({}));
-  // Verantwortliche (leadUserIds) dürfen alle Mitglieder setzen;
+  // Verantwortliche (leadUserIds, externeLeads) dürfen alle Mitglieder setzen;
   // alles andere (Name, Farbe, …) bleibt Admin-Sache.
   const nurLeads =
     body?.name === undefined && body?.beschreibung === undefined && body?.farbe === undefined && body?.reihenfolge === undefined;
@@ -98,6 +98,14 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   if (body?.beschreibung !== undefined) patch.beschreibung = String(body.beschreibung);
   if (body?.farbe !== undefined) patch.farbe = String(body.farbe);
   if (body?.reihenfolge !== undefined) patch.reihenfolge = Number(body.reihenfolge);
+  if (body?.externeLeads !== undefined) {
+    // Kommagetrennte Namen aufräumen (leere Einträge raus).
+    patch.externeLeads = String(body.externeLeads)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join(", ");
+  }
   if (Object.keys(patch).length > 0) await db.update(ressorts).set(patch).where(eq(ressorts.id, ressortId));
 
   if (Array.isArray(body?.leadUserIds)) {

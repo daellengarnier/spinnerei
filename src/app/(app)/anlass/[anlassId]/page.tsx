@@ -120,7 +120,7 @@ export default function AnlassDashboard() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="min-w-0 truncate font-semibold text-ink">{r.name}</p>
-                    {r.leads.length > 0 && (
+                    {(r.leads.length > 0 || r.externeLeads) && (
                       <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-mute">
                         {r.leads.map((l) => (
                           <span key={l.id} className="inline-flex items-center gap-1">
@@ -128,6 +128,7 @@ export default function AnlassDashboard() {
                             {l.name}
                           </span>
                         ))}
+                        {r.externeLeads && <span>{r.externeLeads}</span>}
                       </span>
                     )}
                   </div>
