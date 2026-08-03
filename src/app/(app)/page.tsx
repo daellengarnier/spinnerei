@@ -7,6 +7,7 @@ import { EmptyState, Modal, Spinner } from "@/components/Ui";
 import { Icon } from "@/components/Icon";
 import { useAuth } from "@/components/AuthContext";
 import { icsHerunterladen, ticketpreisText, type UebersichtAnlass } from "@/lib/uebersichtExport";
+import { istFolgetag } from "@/lib/uiUtil";
 
 interface AnlassSummary {
   id: number;
@@ -134,6 +135,21 @@ export default function AnlaesseUebersicht() {
   );
 }
 
+// Türöffnung/Essen/Ende in zeitlicher Reihenfolge (Ende nach Mitternacht zählt als Folgetag).
+function zeitenChronologisch(detail: UebersichtAnlass): { label: string; zeit: string; min: number }[] {
+  const toMin = (z: string) => Number(z.slice(0, 2)) * 60 + Number(z.slice(3, 5));
+  const liste: { label: string; zeit: string; min: number }[] = [];
+  if (detail.tueroeffnung) liste.push({ label: "Türöffnung", zeit: detail.tueroeffnung, min: toMin(detail.tueroeffnung) });
+  if (detail.essen) liste.push({ label: "Essen", zeit: detail.essen, min: toMin(detail.essen) });
+  if (detail.ende)
+    liste.push({
+      label: "Ende",
+      zeit: detail.ende,
+      min: toMin(detail.ende) + (istFolgetag(detail.tueroeffnung, detail.ende) ? 24 * 60 : 0),
+    });
+  return liste.sort((a, b) => a.min - b.min);
+}
+
 function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: UebersichtAnlass }) {
   const { tag, monat, wochentag } = datumTeile(anlass.datum);
   const [offen, setOffen] = useState(false);
@@ -193,28 +209,31 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
         <div className="border-t border-line px-3.5 pb-3.5 pt-2.5">
           {detail ? (
             <>
-              {(detail.tueroeffnung || detail.essen || detail.ende || detail.petzilink || ticketpreisText(detail.normaltarifCents, detail.solitarifCents)) && (
-                <div className="mt-2 space-y-1 text-xs text-dim">
+              {(detail.verantwortliche ?? []).length > 0 && (
+                <div className="mt-2 space-y-1 text-xs">
+                  {detail.verantwortliche.map((v) => (
+                    <p key={v.ressort} className="text-dim">
+                      <span className="text-mute">{v.ressort}:</span>{" "}
+                      {v.namen.length > 0 ? <span className="text-ink">{v.namen.join(", ")}</span> : <span className="text-mute">noch offen</span>}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {(zeitenChronologisch(detail).length > 0 || detail.petzilink || ticketpreisText(detail.normaltarifCents, detail.solitarifCents)) && (
+                <div className="mt-2.5 space-y-1 border-t border-line pt-2 text-xs text-dim">
                   {ticketpreisText(detail.normaltarifCents, detail.solitarifCents) && (
                     <p className="text-ink">{ticketpreisText(detail.normaltarifCents, detail.solitarifCents)}</p>
                   )}
-                  {detail.tueroeffnung && <p>Türöffnung {detail.tueroeffnung}</p>}
-                  {detail.essen && <p>Essen {detail.essen}</p>}
-                  {detail.ende && <p>Ende {detail.ende}</p>}
+                  {zeitenChronologisch(detail).map((z) => (
+                    <p key={z.label}>
+                      {z.label} {z.zeit}
+                    </p>
+                  ))}
                   {detail.petzilink && (
                     <a href={detail.petzilink} target="_blank" rel="noopener noreferrer" className="flex w-fit items-center gap-1 text-accent">
                       <Icon name="send" size={11} /> Petzi
                     </a>
                   )}
-                </div>
-              )}
-              {(detail.verantwortliche ?? []).length > 0 && (
-                <div className="mt-2.5 space-y-1 border-t border-line pt-2 text-xs">
-                  {detail.verantwortliche.map((v) => (
-                    <p key={v.ressort} className="text-dim">
-                      <span className="text-mute">{v.ressort}:</span> <span className="text-ink">{v.namen.join(", ")}</span>
-                    </p>
-                  ))}
                 </div>
               )}
               {detail.acts.length > 0 && (

@@ -85,7 +85,8 @@ export async function GET() {
             ...r.externeLeads.split(",").map((s) => s.trim()).filter(Boolean),
           ],
         }))
-        .filter((v) => v.namen.length > 0),
+        // Licht, Ton und Bar immer zeigen — auch solange noch niemand bestimmt ist.
+        .filter((v) => v.namen.length > 0 || ["Licht", "Ton", "Bar"].includes(v.ressort)),
       acts: (actsProAnlass.get(a.id) ?? []).map((x) => ({
         name: x.name,
         typ: x.typ,
