@@ -135,6 +135,23 @@ export default function AnlaesseUebersicht() {
   );
 }
 
+// Zweifarbiges Kalender-Icon (weisses Blatt, rote Kopfleiste) für den ICS-Download.
+function KalenderIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="3" y="4.5" width="18" height="17" rx="3" fill="#ffffff" />
+      <path d="M3 7.5a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3V10H3V7.5z" fill="#e5484d" />
+      <rect x="7" y="2.2" width="2" height="4.2" rx="1" fill="#ffffff" />
+      <rect x="15" y="2.2" width="2" height="4.2" rx="1" fill="#ffffff" />
+      <circle cx="8" cy="13.8" r="1.1" fill="#1a1a1a" />
+      <circle cx="12" cy="13.8" r="1.1" fill="#1a1a1a" />
+      <circle cx="16" cy="13.8" r="1.1" fill="#1a1a1a" />
+      <circle cx="8" cy="17.4" r="1.1" fill="#1a1a1a" />
+      <circle cx="12" cy="17.4" r="1.1" fill="#1a1a1a" />
+    </svg>
+  );
+}
+
 // Türöffnung/Essen/Ende in zeitlicher Reihenfolge (Ende nach Mitternacht zählt als Folgetag).
 function zeitenChronologisch(detail: UebersichtAnlass): { label: string; zeit: string; min: number }[] {
   const toMin = (z: string) => Number(z.slice(0, 2)) * 60 + Number(z.slice(3, 5));
@@ -168,7 +185,7 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
               <span className="truncate">{anlass.name}</span>
               {detail && (
                 <button
-                  className="shrink-0 text-mute transition hover:text-accent active:scale-95"
+                  className="shrink-0 transition active:scale-95"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -177,7 +194,7 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
                   aria-label="In Kalender übertragen"
                   title="In Kalender übertragen"
                 >
-                  <Icon name="calendar" size={15} />
+                  <KalenderIcon size={17} />
                 </button>
               )}
             </p>
