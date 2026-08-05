@@ -1,6 +1,5 @@
-# Diagnose: kulturspinnerei.ch (WordPress) vom VPS aus inspizieren —
-# Theme, Event-Plugin, REST-API und Struktur vergangener Veranstaltungen.
-# Nur lesend, keine Secrets in den Logs.
+# Diagnose: prüfen ob die WordPress-Variablen im App-Container angekommen
+# sind (nur ja/nein, keine Werte in den Logs).
 name: Diagnose VPS
 
 on:
@@ -12,7 +11,7 @@ jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: WordPress-Struktur via SSH inspizieren
+      - name: WP-Env-Check via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -21,21 +20,6 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
             set -uo pipefail
-            BASE=https://kulturspinnerei.ch
-            CURL="docker run --rm curlimages/curl:8.10.1 -sS -L --max-time 20"
-            echo "=== HTTP-Header Startseite ==="
-            $CURL -I "$BASE/" | head -20 || true
-            echo "=== Theme & Plugins (aus HTML) ==="
-            HTML=$($CURL "$BASE/" || true)
-            printf '%s' "$HTML" | grep -oE 'wp-content/(themes|plugins)/[A-Za-z0-9_-]+' | sort -u | head -25 || true
-            printf '%s' "$HTML" | grep -oiE '<meta name="generator"[^>]*>' | head -3 || true
-            echo "=== Links zu Programm/Events/Anlässen ==="
-            printf '%s' "$HTML" | grep -oE 'href="[^"]+"' | grep -iE 'programm|event|anlass|agenda|veranstalt|konzert' | sort -u | head -25 || true
-            echo "=== REST-API Root (Namespaces) ==="
-            $CURL "$BASE/wp-json/" | head -c 800 || true; echo
-            echo "=== Post-Types ==="
-            $CURL "$BASE/wp-json/wp/v2/types?context=view" | head -c 2500 || true; echo
-            echo "=== The Events Calendar? ==="
-            $CURL "$BASE/wp-json/tribe/events/v1/events?per_page=2" | head -c 1200 || true; echo
-            echo "=== Neueste Beitraege (Titel+Link) ==="
-            $CURL "$BASE/wp-json/wp/v2/posts?per_page=5&_fields=id,date,link,title,type" | head -c 2000 || true; echo
+            docker exec spinnerei-app sh -c 'test -n "$WP_URL" && echo "WP_URL: gesetzt" || echo "WP_URL: FEHLT"'
+            docker exec spinnerei-app sh -c 'test -n "$WP_USER" && echo "WP_USER: gesetzt" || echo "WP_USER: FEHLT"'
+            docker exec spinnerei-app sh -c 'test -n "$WP_APP_PASSWORD" && echo "WP_APP_PASSWORD: gesetzt" || echo "WP_APP_PASSWORD: FEHLT"'
