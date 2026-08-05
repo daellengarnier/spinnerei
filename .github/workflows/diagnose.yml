@@ -1,5 +1,6 @@
-# Einmalig: VAPID-Schlüssel für Web-Push auf dem VPS einrichten.
-# Schlüssel werden auf dem VPS generiert und landen NIE in den Logs.
+# Diagnose: kulturspinnerei.ch (WordPress) vom VPS aus inspizieren —
+# Theme, Event-Plugin, REST-API und Struktur vergangener Veranstaltungen.
+# Nur lesend, keine Secrets in den Logs.
 name: Diagnose VPS
 
 on:
@@ -11,7 +12,7 @@ jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: VAPID einrichten via SSH
+      - name: WordPress-Struktur via SSH inspizieren
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -19,20 +20,22 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
-            set -euo pipefail
-            cd /opt/spinnerei
-            if grep -q VAPID_PUBLIC_KEY .env 2>/dev/null; then
-              echo "VAPID bereits konfiguriert."
-            else
-              KEYS=$(docker run --rm node:22-alpine sh -c "npm i -g web-push@3.6.7 >/dev/null 2>&1 && node -e \"const wp=require('/usr/local/lib/node_modules/web-push');const k=wp.generateVAPIDKeys();console.log('VAPID_PUBLIC_KEY='+k.publicKey);console.log('VAPID_PRIVATE_KEY='+k.privateKey);\"")
-              printf '%s\n' "$KEYS" >> .env
-              echo "VAPID_SUBJECT=mailto:orga@spinnerei.al-daellen.ch" >> .env
-              echo "VAPID-Schlüssel generiert und in .env abgelegt."
-            fi
-            if ! grep -q VAPID_PUBLIC_KEY docker-compose.yml; then
-              sed -i 's|^\(      DATABASE_URL: .*\)$|\1\n      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}\n      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}\n      VAPID_SUBJECT: ${VAPID_SUBJECT:-}|' docker-compose.yml
-              echo "docker-compose.yml um VAPID-Variablen ergänzt."
-            fi
-            docker compose up -d
-            sleep 5
-            docker exec spinnerei-app sh -c 'test -n "$VAPID_PUBLIC_KEY" && echo "App hat VAPID_PUBLIC_KEY: ja" || echo "App hat VAPID_PUBLIC_KEY: NEIN"'
+            set -uo pipefail
+            BASE=https://kulturspinnerei.ch
+            CURL="docker run --rm curlimages/curl:8.10.1 -sS -L --max-time 20"
+            echo "=== HTTP-Header Startseite ==="
+            $CURL -I "$BASE/" | head -20 || true
+            echo "=== Theme & Plugins (aus HTML) ==="
+            HTML=$($CURL "$BASE/" || true)
+            printf '%s' "$HTML" | grep -oE 'wp-content/(themes|plugins)/[A-Za-z0-9_-]+' | sort -u | head -25 || true
+            printf '%s' "$HTML" | grep -oiE '<meta name="generator"[^>]*>' | head -3 || true
+            echo "=== Links zu Programm/Events/Anlässen ==="
+            printf '%s' "$HTML" | grep -oE 'href="[^"]+"' | grep -iE 'programm|event|anlass|agenda|veranstalt|konzert' | sort -u | head -25 || true
+            echo "=== REST-API Root (Namespaces) ==="
+            $CURL "$BASE/wp-json/" | head -c 800 || true; echo
+            echo "=== Post-Types ==="
+            $CURL "$BASE/wp-json/wp/v2/types?context=view" | head -c 2500 || true; echo
+            echo "=== The Events Calendar? ==="
+            $CURL "$BASE/wp-json/tribe/events/v1/events?per_page=2" | head -c 1200 || true; echo
+            echo "=== Neueste Beitraege (Titel+Link) ==="
+            $CURL "$BASE/wp-json/wp/v2/posts?per_page=5&_fields=id,date,link,title,type" | head -c 2000 || true; echo
