@@ -50,6 +50,8 @@ export const anlaesse = pgTable("anlaesse", {
   // Ticketpreise in Rappen (null = noch nicht festgelegt).
   normaltarifCents: integer("normaltarifCents"),
   solitarifCents: integer("solitarifCents"),
+  // ID des Events auf kulturspinnerei.ch (The Events Calendar), null = nie publiziert.
+  wpEventId: integer("wpEventId"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

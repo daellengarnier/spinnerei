@@ -29,6 +29,7 @@ interface Anlass {
   abendverantwortungUserId: number | null;
   normaltarifCents: number | null;
   solitarifCents: number | null;
+  wpEventId: number | null;
 }
 
 interface AnlassAct {
@@ -401,6 +402,7 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
           </a>
         )}
       </div>
+      {werte.zugang === "oeffentlich" && <WebsitePublish anlass={anlass} />}
       {error && <p className="err-box mt-2">{error}</p>}
       </div>
       )}
@@ -429,6 +431,55 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
         </p>
       )}
     </section>
+  );
+}
+
+// Öffentliche Anlässe als Event-Entwurf auf kulturspinnerei.ch publizieren.
+function WebsitePublish({ anlass }: { anlass: Anlass }) {
+  const [wpEventId, setWpEventId] = useState<number | null>(anlass.wpEventId);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [editUrl, setEditUrl] = useState("");
+  const [fehler, setFehler] = useState("");
+
+  const publish = async () => {
+    setBusy(true);
+    setMsg("");
+    setFehler("");
+    try {
+      const r = await api.post<{ wpEventId: number; aktualisiert: boolean; editUrl: string }>(`/anlaesse/${anlass.id}/publish`, {});
+      setWpEventId(r.wpEventId);
+      setEditUrl(r.editUrl);
+      setMsg(
+        r.aktualisiert
+          ? "Website-Event aktualisiert."
+          : "Als Entwurf auf kulturspinnerei.ch erstellt — dort Bild ergänzen und veröffentlichen.",
+      );
+    } catch (e) {
+      setFehler((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 border-t border-line pt-2.5">
+      <button className="btn-ghost w-full py-1.5 text-sm" onClick={publish} disabled={busy}>
+        <Icon name="external" size={14} />
+        {busy ? "Publizieren …" : wpEventId ? "Website-Event aktualisieren" : "Auf Website publizieren"}
+      </button>
+      {msg && (
+        <p className="mt-1.5 text-xs text-dim">
+          {msg}{" "}
+          {editUrl && (
+            <a href={editUrl} target="_blank" rel="noopener noreferrer" className="text-accent">
+              In WordPress öffnen
+            </a>
+          )}
+        </p>
+      )}
+      {fehler && <p className="err-box mt-1.5">{fehler}</p>}
+    </div>
   );
 }
 

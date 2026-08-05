@@ -39,6 +39,10 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+      # WordPress (kulturspinnerei.ch) für den Event-Publish; Werte in .env.
+      WP_URL: ${WP_URL:-}
+      WP_USER: ${WP_USER:-}
+      WP_APP_PASSWORD: ${WP_APP_PASSWORD:-}
     depends_on:
       db:
         condition: service_healthy

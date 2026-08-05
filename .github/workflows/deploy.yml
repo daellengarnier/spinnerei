@@ -62,14 +62,30 @@ jobs:
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          WP_URL: ${{ secrets.WP_URL }}
+          WP_USER: ${{ secrets.WP_USER }}
+          WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
+          envs: WP_URL,WP_USER,WP_APP_PASSWORD
           script: |
             set -euo pipefail
             cd /opt/spinnerei
+            # WordPress-Zugang (kulturspinnerei.ch) in .env nachführen — Werte
+            # kommen aus GitHub-Secrets und werden in den Logs maskiert.
+            if [ -n "${WP_APP_PASSWORD:-}" ]; then
+              grep -vE '^WP_(URL|USER|APP_PASSWORD)=' .env > .env.tmp || true
+              printf 'WP_URL=%s\nWP_USER=%s\nWP_APP_PASSWORD=%s\n' "$WP_URL" "$WP_USER" "$WP_APP_PASSWORD" >> .env.tmp
+              mv .env.tmp .env
+            fi
+            if ! grep -q WP_APP_PASSWORD docker-compose.yml; then
+              sed -i 's|^\(      VAPID_SUBJECT: .*\)$|\1\n      WP_URL: ${WP_URL:-}\n      WP_USER: ${WP_USER:-}\n      WP_APP_PASSWORD: ${WP_APP_PASSWORD:-}|' docker-compose.yml
+              echo "docker-compose.yml um WordPress-Variablen ergänzt."
+            fi
             docker compose pull
             docker compose up -d
             docker image prune -f
