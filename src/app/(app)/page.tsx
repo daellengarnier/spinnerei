@@ -197,6 +197,15 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
                   <KalenderIcon size={17} />
                 </button>
               )}
+              {detail?.verkaufteTickets != null && (
+                <span
+                  className="inline-flex shrink-0 items-baseline gap-1 text-xs text-dim"
+                  title={`${detail.verkaufteTickets} Tickets verkauft (Petzi)`}
+                >
+                  <Icon name="ticket" size={13} className="self-center text-accent" />
+                  <span className="tabular-nums font-semibold text-ink">{detail.verkaufteTickets}</span>
+                </span>
+              )}
             </p>
             {(detail?.art || zugangLabel) && (
               <p className="mt-0.5 truncate text-xs text-mute">{[detail?.art, zugangLabel].filter(Boolean).join(" · ")}</p>
