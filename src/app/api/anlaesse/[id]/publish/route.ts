@@ -65,7 +65,15 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         .filter(Boolean)
         .map((p) => `<p>${htmlEscape(p).replace(/\n/g, "<br>")}</p>`)
         .join("\n");
-      return `<h3>${htmlEscape(a.name)}${meta ? ` <small>(${htmlEscape(meta)})</small>` : ""}</h3>\n${absaetze}`;
+      // Heisst der Act wie der Anlass (z. B. Record-Release-Show), den Namen
+      // nicht nochmals als Überschrift wiederholen — nur Genre/Herkunft.
+      const istTitel = a.name.trim().toLowerCase() === anlass.name.trim().toLowerCase();
+      const kopf = istTitel
+        ? meta
+          ? `<p><em>${htmlEscape(meta)}</em></p>`
+          : ""
+        : `<h3>${htmlEscape(a.name)}${meta ? ` <small>(${htmlEscape(meta)})</small>` : ""}</h3>`;
+      return [kopf, absaetze].filter(Boolean).join("\n");
     })
     .join("\n");
 
