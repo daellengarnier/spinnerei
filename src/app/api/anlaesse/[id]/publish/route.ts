@@ -120,9 +120,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     return Response.json({ error: `WordPress hat abgelehnt: HTTP ${res.status}${grund}` }, { status: 502 });
   }
 
-  if (anlass.wpEventId !== data.id) {
-    await db.update(anlaesse).set({ wpEventId: data.id }).where(eq(anlaesse.id, id));
-  }
+  await db.update(anlaesse).set({ wpEventId: data.id, wpPublishedAt: new Date() }).where(eq(anlaesse.id, id));
 
   return Response.json({
     ok: true,

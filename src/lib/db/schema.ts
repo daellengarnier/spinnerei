@@ -52,6 +52,8 @@ export const anlaesse = pgTable("anlaesse", {
   solitarifCents: integer("solitarifCents"),
   // ID des Events auf kulturspinnerei.ch (The Events Calendar), null = nie publiziert.
   wpEventId: integer("wpEventId"),
+  // Wann zuletzt auf die Website publiziert wurde.
+  wpPublishedAt: timestamp("wpPublishedAt", { withTimezone: true }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
