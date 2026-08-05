@@ -55,7 +55,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         .orderBy(asc(acts.showtime), asc(acts.name))
     : [];
 
-  const beschreibung = anlassActs
+  const actsHtml = anlassActs
     .filter((a) => a.name)
     .map((a) => {
       const meta = [a.genre, a.herkunft].filter(Boolean).join(", ");
@@ -78,6 +78,19 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   ]
     .filter(Boolean)
     .join(" / ");
+
+  // Eckdaten + Petzilink sichtbar in die Beschreibung (das Website-Feld
+  // des Events zeigt das Theme nicht zuverlässig an).
+  const infoZeile = [
+    anlass.tueroeffnung && `Türöffnung ${anlass.tueroeffnung} Uhr`,
+    kosten && `Eintritt ${kosten}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const ticketAbsatz = anlass.petzilink
+    ? `<p><strong><a href="${htmlEscape(anlass.petzilink)}" target="_blank" rel="noopener">Tickets im Vorverkauf (Petzi)</a></strong></p>`
+    : "";
+  const beschreibung = [infoZeile && `<p>${htmlEscape(infoZeile)}</p>`, actsHtml, ticketAbsatz].filter(Boolean).join("\n");
 
   const payload: Record<string, unknown> = {
     title: anlass.name,
