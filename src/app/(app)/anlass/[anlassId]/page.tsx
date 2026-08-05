@@ -449,13 +449,18 @@ function WebsitePublish({ anlass }: { anlass: Anlass }) {
     setMsg("");
     setFehler("");
     try {
-      const r = await api.post<{ wpEventId: number; aktualisiert: boolean; editUrl: string }>(`/anlaesse/${anlass.id}/publish`, {});
+      const r = await api.post<{ wpEventId: number; aktualisiert: boolean; status: string; editUrl: string }>(
+        `/anlaesse/${anlass.id}/publish`,
+        {},
+      );
       setWpEventId(r.wpEventId);
       setPublishedAt(new Date().toISOString());
       setEditUrl(r.editUrl);
       setMsg(
         r.aktualisiert
-          ? "Website-Event aktualisiert."
+          ? r.status === "publish"
+            ? "Website-Event aktualisiert — die Änderungen sind direkt live."
+            : "Website-Event aktualisiert (noch Entwurf — in WordPress veröffentlichen)."
           : "Als Entwurf auf kulturspinnerei.ch erstellt — dort Bild ergänzen und veröffentlichen.",
       );
     } catch (e) {

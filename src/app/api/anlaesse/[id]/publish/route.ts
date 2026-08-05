@@ -98,14 +98,39 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   const ticketAbsatz = anlass.petzilink
     ? `<p><strong><a href="${htmlEscape(anlass.petzilink)}" target="_blank" rel="noopener">Tickets im Vorverkauf (Petzi)</a></strong></p>`
     : "";
-  const beschreibung = [infoZeile && `<p>${htmlEscape(infoZeile)}</p>`, actsHtml, ticketAbsatz].filter(Boolean).join("\n");
+  // Noch keine Act-Infos erfasst → Platzhalter, damit die Seite nicht leer wirkt.
+  const beschreibung = [
+    infoZeile && `<p>${htmlEscape(infoZeile)}</p>`,
+    actsHtml || "<p><em>Weitere Infos folgen.</em></p>",
+    ticketAbsatz,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const authHeader = `Basic ${Buffer.from(`${wpUser}:${wpPass}`).toString("base64")}`;
+
+  // Erstes Publizieren: als Entwurf (Plakat & Freigabe in WordPress).
+  // Aktualisieren: bisherigen Status behalten — ein bereits veröffentlichtes
+  // Event bleibt veröffentlicht, die Änderungen gehen direkt live.
+  let status = "draft";
+  if (anlass.wpEventId) {
+    try {
+      const aktuell = await fetch(`${wpUrl}/wp-json/tribe/events/v1/events/${anlass.wpEventId}`, {
+        headers: { Authorization: authHeader },
+      });
+      const aktuellData = (await aktuell.json().catch(() => null)) as { status?: string } | null;
+      if (aktuell.ok && aktuellData?.status) status = aktuellData.status;
+    } catch {
+      /* Status nicht lesbar → draft als sicherer Fallback */
+    }
+  }
 
   const payload: Record<string, unknown> = {
     title: anlass.name,
     description: beschreibung,
     start_date: start,
     end_date: ende,
-    status: "draft",
+    status,
   };
   // Kein cost-Feld: das Theme rendert es unschön ($-Zeichen) unter dem Titel —
   // die Preise stehen bereits in der Info-Zeile der Beschreibung.
@@ -123,7 +148,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${Buffer.from(`${wpUser}:${wpPass}`).toString("base64")}`,
+        Authorization: authHeader,
       },
       body: JSON.stringify(payload),
     });
@@ -150,6 +175,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     ok: true,
     wpEventId: data.id,
     aktualisiert: !!anlass.wpEventId,
+    status,
     // Direktlink in den WordPress-Editor (Entwurf prüfen, Bild ergänzen, veröffentlichen).
     editUrl: `${wpUrl}/wp-admin/post.php?post=${data.id}&action=edit`,
   });
