@@ -1,5 +1,5 @@
-# Diagnose: prüfen ob die WordPress-Variablen im App-Container angekommen
-# sind (nur ja/nein, keine Werte in den Logs).
+# Diagnose: vergangene Events auf kulturspinnerei.ch anschauen —
+# Beschreibung/Formatierung/Links, damit der Publish sie nachbildet.
 name: Diagnose VPS
 
 on:
@@ -11,7 +11,7 @@ jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: WP-Env-Check via SSH
+      - name: Vergangene Events inspizieren
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -20,6 +20,13 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
             set -uo pipefail
-            docker exec spinnerei-app sh -c 'test -n "$WP_URL" && echo "WP_URL: gesetzt" || echo "WP_URL: FEHLT"'
-            docker exec spinnerei-app sh -c 'test -n "$WP_USER" && echo "WP_USER: gesetzt" || echo "WP_USER: FEHLT"'
-            docker exec spinnerei-app sh -c 'test -n "$WP_APP_PASSWORD" && echo "WP_APP_PASSWORD: gesetzt" || echo "WP_APP_PASSWORD: FEHLT"'
+            BASE=https://kulturspinnerei.ch
+            CURL="docker run --rm curlimages/curl:8.10.1 -sS -L --max-time 20"
+            echo "=== Vergangene Events (Liste) ==="
+            $CURL "$BASE/wp-json/tribe/events/v1/events?start_date=2024-01-01&end_date=2026-08-04&per_page=4&_fields=id,title,url,website,cost,start_date,end_date" | head -c 2500 || true; echo
+            echo "=== Detail des neuesten vergangenen Events ==="
+            ID=$($CURL "$BASE/wp-json/tribe/events/v1/events?start_date=2024-01-01&end_date=2026-08-04&per_page=50" | tr ',' '\n' | grep -oE '"id":[0-9]+' | tail -1 | grep -oE '[0-9]+')
+            echo "Event-ID: ${ID:-keine gefunden}"
+            if [ -n "${ID:-}" ]; then
+              $CURL "$BASE/wp-json/tribe/events/v1/events/$ID" | head -c 6000 || true; echo
+            fi
