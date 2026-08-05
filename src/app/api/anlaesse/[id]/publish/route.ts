@@ -115,7 +115,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     return Response.json({ error: "Das Website-Event existiert nicht mehr — bitte nochmals publizieren (legt ein neues an)." }, { status: 409 });
   }
   if (!res.ok || !data?.id) {
-    const grund = data?.message ? ` (${data.message})` : "";
+    // WordPress-Meldungen enthalten teils HTML — für die Anzeige entfernen.
+    const grund = data?.message ? ` (${data.message.replace(/<[^>]+>/g, "")})` : "";
     return Response.json({ error: `WordPress hat abgelehnt: HTTP ${res.status}${grund}` }, { status: 502 });
   }
 
