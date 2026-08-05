@@ -1,5 +1,4 @@
-# Einmalig: 4 vor Webhook-Aktivierung verkaufte Artlu-Bubble-Tickets
-# als Nachtrag in petzi_tickets einfügen (idempotent), danach Kontrolle.
+# Diagnose: kommende Anlässe mit Eckdaten auslesen (für Saison-Mail).
 name: Diagnose VPS
 
 on:
@@ -11,7 +10,7 @@ jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: Ticket-Nachtrag via SSH
+      - name: Anlässe auslesen via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -20,17 +19,5 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
             set -uo pipefail
-            echo "=== Anlass & Petzilink prüfen ==="
-            docker exec spinnerei-db psql -U spinnerei -d spinnerei -c "SELECT id, name, petzilink FROM anlaesse WHERE name ILIKE '%artlu%';"
-            echo "=== Nachtrag einfügen (idempotent) ==="
-            docker exec spinnerei-db psql -U spinnerei -d spinnerei -c "
-              WITH ziel AS (
-                SELECT (regexp_match(petzilink, '(\d{3,})'))[1]::int AS event_id
-                FROM anlaesse WHERE name ILIKE '%artlu%' AND petzilink <> '' LIMIT 1
-              )
-              INSERT INTO petzi_tickets (\"ticketNumber\", \"eventId\", \"eventTitel\", kategorie, storniert)
-              SELECT 'NACHTRAG-' || event_id || '-' || n, event_id, 'Artlu Bubble (Nachtrag vor Webhook-Start)', '', false
-              FROM ziel, generate_series(1,4) AS n
-              ON CONFLICT (\"ticketNumber\") DO NOTHING;"
-            echo "=== Kontrolle: Tickets pro Event ==="
-            docker exec spinnerei-db psql -U spinnerei -d spinnerei -c "SELECT \"eventId\", COUNT(*) FILTER (WHERE NOT storniert) AS aktiv FROM petzi_tickets GROUP BY \"eventId\" ORDER BY \"eventId\";"
+            echo "=== Kommende Anlässe ==="
+            docker exec spinnerei-db psql -U spinnerei -d spinnerei -c "SELECT datum, name, art, zugang, tueroeffnung, ende FROM anlaesse WHERE datum >= to_char(now(), 'YYYY-MM-DD') ORDER BY datum;"
