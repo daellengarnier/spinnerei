@@ -1,0 +1,1 @@
+ALTER TABLE "anlaesse" ADD COLUMN "wpPublishedAt" timestamp with time zone;

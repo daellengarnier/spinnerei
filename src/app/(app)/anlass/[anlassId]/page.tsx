@@ -10,7 +10,7 @@ import { ressortIcon } from "@/lib/ressortIcon";
 import { ressortHint } from "@/lib/ressortHint";
 import { useAuth } from "@/components/AuthContext";
 import { useUsers } from "@/lib/useUsers";
-import { formatDate } from "@/lib/uiUtil";
+import { formatDate, relTime } from "@/lib/uiUtil";
 import type { RessortSummary } from "@/lib/uiTypes";
 
 interface Anlass {
@@ -30,6 +30,7 @@ interface Anlass {
   normaltarifCents: number | null;
   solitarifCents: number | null;
   wpEventId: number | null;
+  wpPublishedAt: string | null;
 }
 
 interface AnlassAct {
@@ -437,6 +438,7 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
 // Öffentliche Anlässe als Event-Entwurf auf kulturspinnerei.ch publizieren.
 function WebsitePublish({ anlass }: { anlass: Anlass }) {
   const [wpEventId, setWpEventId] = useState<number | null>(anlass.wpEventId);
+  const [publishedAt, setPublishedAt] = useState<string | null>(anlass.wpPublishedAt);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [editUrl, setEditUrl] = useState("");
@@ -449,6 +451,7 @@ function WebsitePublish({ anlass }: { anlass: Anlass }) {
     try {
       const r = await api.post<{ wpEventId: number; aktualisiert: boolean; editUrl: string }>(`/anlaesse/${anlass.id}/publish`, {});
       setWpEventId(r.wpEventId);
+      setPublishedAt(new Date().toISOString());
       setEditUrl(r.editUrl);
       setMsg(
         r.aktualisiert
@@ -468,6 +471,11 @@ function WebsitePublish({ anlass }: { anlass: Anlass }) {
         <Icon name="external" size={14} />
         {busy ? "Publizieren …" : wpEventId ? "Website-Event aktualisieren" : "Auf Website publizieren"}
       </button>
+      {publishedAt ? (
+        <p className="mt-1.5 text-xs text-dim">Auf der Website: publiziert {relTime(publishedAt)}</p>
+      ) : (
+        <p className="mt-1.5 text-xs text-mute">Noch nicht auf der Website.</p>
+      )}
       {msg && (
         <p className="mt-1.5 text-xs text-dim">
           {msg}{" "}
