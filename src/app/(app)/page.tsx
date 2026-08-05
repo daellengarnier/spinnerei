@@ -241,6 +241,9 @@ function AnlassKarte({ anlass, detail }: { anlass: AnlassSummary; detail?: Ueber
                   {ticketpreisText(detail.normaltarifCents, detail.solitarifCents) && (
                     <p className="text-ink">{ticketpreisText(detail.normaltarifCents, detail.solitarifCents)}</p>
                   )}
+                  {detail.verkaufteTickets != null && detail.verkaufteTickets > 0 && (
+                    <p className="text-ink">{detail.verkaufteTickets} Tickets verkauft</p>
+                  )}
                   {zeitenChronologisch(detail).map((z) => (
                     <p key={z.label}>
                       {z.label} {z.zeit}

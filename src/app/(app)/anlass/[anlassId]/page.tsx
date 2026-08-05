@@ -49,6 +49,7 @@ export default function AnlassDashboard() {
   const { user } = useAuth();
   const [anlass, setAnlass] = useState<Anlass | null>(null);
   const [acts, setActs] = useState<AnlassAct[]>([]);
+  const [verkaufteTickets, setVerkaufteTickets] = useState<number | null>(null);
   const [ressorts, setRessorts] = useState<RessortSummary[] | null>(null);
   const [error, setError] = useState("");
   const [editOpen, setEditOpen] = useState(false);
@@ -56,10 +57,11 @@ export default function AnlassDashboard() {
   useEffect(() => {
     if (!anlassId) return;
     api
-      .get<{ anlass: Anlass; acts: AnlassAct[] }>(`/anlaesse/${anlassId}`)
+      .get<{ anlass: Anlass; acts: AnlassAct[]; verkaufteTickets: number | null }>(`/anlaesse/${anlassId}`)
       .then((d) => {
         setAnlass(d.anlass);
         setActs(d.acts);
+        setVerkaufteTickets(d.verkaufteTickets ?? null);
       })
       .catch((e) => setError((e as Error).message));
     api
@@ -101,7 +103,7 @@ export default function AnlassDashboard() {
         />
       )}
 
-      <Uebersicht anlass={anlass} acts={acts} onSaved={(a) => setAnlass(a)} />
+      <Uebersicht anlass={anlass} acts={acts} verkaufteTickets={verkaufteTickets} onSaved={(a) => setAnlass(a)} />
 
       <div>
         <h2 className="lbl mb-2 px-1">Ressorts</h2>
@@ -158,7 +160,17 @@ const ZEIT_FELDER = [
 
 // Anlassübersicht: Eckzeiten & Petzilink (editierbar, optional — mit Reminder
 // bei fehlenden Angaben) + Act-Zeiten aus dem Acts-Ressort.
-function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct[]; onSaved: (a: Anlass) => void }) {
+function Uebersicht({
+  anlass,
+  acts,
+  verkaufteTickets,
+  onSaved,
+}: {
+  anlass: Anlass;
+  acts: AnlassAct[];
+  verkaufteTickets: number | null;
+  onSaved: (a: Anlass) => void;
+}) {
   const [werte, setWerte] = useState({
     tueroeffnung: anlass.tueroeffnung,
     essen: anlass.essen,
@@ -248,6 +260,11 @@ function Uebersicht({ anlass, acts, onSaved }: { anlass: Anlass; acts: AnlassAct
         <h2 className="block-title">Anlassübersicht</h2>
         <Icon name="chevron" size={16} className={`text-mute transition-transform ${offen ? "-rotate-90" : "rotate-90"}`} />
       </button>
+      {verkaufteTickets != null && (
+        <p className="mt-1 text-xs text-dim">
+          <span className="font-semibold text-ink">{verkaufteTickets}</span> Tickets verkauft (Petzi)
+        </p>
+      )}
 
       {offen && (
       <div className="mt-2.5">

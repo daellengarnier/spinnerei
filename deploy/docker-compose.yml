@@ -43,6 +43,8 @@ services:
       WP_URL: ${WP_URL:-}
       WP_USER: ${WP_USER:-}
       WP_APP_PASSWORD: ${WP_APP_PASSWORD:-}
+      # Petzi-Webhook (Ticketverkäufe); Wert in .env.
+      PETZI_WEBHOOK_SECRET: ${PETZI_WEBHOOK_SECRET:-}
     depends_on:
       db:
         condition: service_healthy

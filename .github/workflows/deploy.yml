@@ -66,12 +66,13 @@ jobs:
           WP_URL: ${{ secrets.WP_URL }}
           WP_USER: ${{ secrets.WP_USER }}
           WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+          PETZI_WEBHOOK_SECRET: ${{ secrets.PETZI_WEBHOOK_SECRET }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          envs: WP_URL,WP_USER,WP_APP_PASSWORD
+          envs: WP_URL,WP_USER,WP_APP_PASSWORD,PETZI_WEBHOOK_SECRET
           script: |
             set -euo pipefail
             cd /opt/spinnerei
@@ -85,6 +86,16 @@ jobs:
             if ! grep -q WP_APP_PASSWORD docker-compose.yml; then
               sed -i 's|^\(      VAPID_SUBJECT: .*\)$|\1\n      WP_URL: ${WP_URL:-}\n      WP_USER: ${WP_USER:-}\n      WP_APP_PASSWORD: ${WP_APP_PASSWORD:-}|' docker-compose.yml
               echo "docker-compose.yml um WordPress-Variablen ergänzt."
+            fi
+            # Petzi-Webhook-Secret nachführen (gleiches Muster wie WordPress).
+            if [ -n "${PETZI_WEBHOOK_SECRET:-}" ]; then
+              grep -v '^PETZI_WEBHOOK_SECRET=' .env > .env.tmp || true
+              printf 'PETZI_WEBHOOK_SECRET=%s\n' "$PETZI_WEBHOOK_SECRET" >> .env.tmp
+              mv .env.tmp .env
+            fi
+            if ! grep -q PETZI_WEBHOOK_SECRET docker-compose.yml; then
+              sed -i 's|^\(      WP_APP_PASSWORD: .*\)$|\1\n      PETZI_WEBHOOK_SECRET: ${PETZI_WEBHOOK_SECRET:-}|' docker-compose.yml
+              echo "docker-compose.yml um Petzi-Variable ergänzt."
             fi
             docker compose pull
             docker compose up -d

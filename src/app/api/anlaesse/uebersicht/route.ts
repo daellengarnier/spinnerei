@@ -1,7 +1,8 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { requireUser, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
-import { acts, anlaesse, ressortLeads, ressorts, users } from "@/lib/db/schema";
+import { acts, anlaesse, petziTickets, ressortLeads, ressorts, users } from "@/lib/db/schema";
+import { petziEventIdAusLink } from "@/lib/petzi";
 
 // Saison-Übersicht: alle Anlässe mit Eckdaten (Datum, Art, Zeiten, Petzilink)
 // und ihren Acts (Genre, Herkunft, Showtime) — alles automatisch aus den
@@ -60,6 +61,17 @@ export async function GET() {
     actsProAnlass.set(anlassId, liste);
   }
 
+  // Verkaufte Petzi-Tickets pro Event-ID (aus den Petzilinks der Anlässe).
+  const petziIds = alleAnlaesse.map((a) => petziEventIdAusLink(a.petzilink)).filter((x): x is number => x !== null);
+  const ticketCounts = petziIds.length
+    ? await db
+        .select({ eventId: petziTickets.eventId, c: count() })
+        .from(petziTickets)
+        .where(and(inArray(petziTickets.eventId, petziIds), eq(petziTickets.storniert, false)))
+        .groupBy(petziTickets.eventId)
+    : [];
+  const verkauftProEvent = new Map(ticketCounts.map((t) => [t.eventId, t.c]));
+
   return Response.json({
     anlaesse: alleAnlaesse.map((a) => ({
       id: a.id,
@@ -75,6 +87,10 @@ export async function GET() {
       abendverantwortung: (a.abendverantwortungUserId && userName.get(a.abendverantwortungUserId)) || "",
       normaltarifCents: a.normaltarifCents,
       solitarifCents: a.solitarifCents,
+      verkaufteTickets: (() => {
+        const pid = petziEventIdAusLink(a.petzilink);
+        return pid ? (verkauftProEvent.get(pid) ?? 0) : null;
+      })(),
       verantwortliche: alleRessorts
         .filter((r) => r.anlassId === a.id)
         .sort((x, y) => x.reihenfolge - y.reihenfolge)

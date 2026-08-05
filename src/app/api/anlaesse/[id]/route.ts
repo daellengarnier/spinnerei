@@ -1,7 +1,8 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { requireUser, requireAdmin, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
-import { acts, anlaesse, ressorts, users } from "@/lib/db/schema";
+import { acts, anlaesse, petziTickets, ressorts, users } from "@/lib/db/schema";
+import { petziEventIdAusLink } from "@/lib/petzi";
 
 // Einzelner Anlass inkl. Anlassübersicht: Eckzeiten + alle Acts (mit Zeiten)
 // aus den Acts-Ressorts dieses Anlasses.
@@ -45,7 +46,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       .limit(1);
     abendverantwortung = av[0] ?? null;
   }
-  return Response.json({ anlass: rows[0], abendverantwortung, acts: anlassActs });
+  // Verkaufte Petzi-Tickets (via Webhook), zugeordnet über die Event-ID im Petzilink.
+  let verkaufteTickets: number | null = null;
+  const petziId = petziEventIdAusLink(rows[0].petzilink);
+  if (petziId) {
+    const c = await db
+      .select({ c: count() })
+      .from(petziTickets)
+      .where(and(eq(petziTickets.eventId, petziId), eq(petziTickets.storniert, false)));
+    verkaufteTickets = c[0].c;
+  }
+
+  return Response.json({ anlass: rows[0], abendverantwortung, acts: anlassActs, verkaufteTickets });
 }
 
 // Anlass ändern — alle Felder dürfen alle Mitglieder pflegen (Vertrauensmodell);

@@ -156,6 +156,19 @@ export const bookingVotes = pgTable(
   (t) => [uniqueIndex("uq_booking_vote").on(t.anfrageId, t.userId)],
 );
 
+// Verkaufte Petzi-Tickets, gemeldet über den Petzi-Webhook (ein Eintrag pro
+// Ticket; Zuordnung zum Anlass über die Event-ID aus dem Petzilink).
+export const petziTickets = pgTable("petzi_tickets", {
+  id: serial("id").primaryKey(),
+  ticketNumber: text("ticketNumber").notNull().unique(),
+  eventId: integer("eventId"),
+  eventTitel: text("eventTitel").notNull().default(""),
+  kategorie: text("kategorie").notNull().default(""),
+  betragCents: integer("betragCents"),
+  storniert: boolean("storniert").notNull().default(false),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Abrechnung pro Anlass (digitalisiert das bisherige Excel-Sheet).
 // Beträge in Rappen. Listen (Eintritts-Stufen, Miete, manuelle Gagen) als JSON,
 // da sie nur als Ganzes gelesen/geschrieben werden.
