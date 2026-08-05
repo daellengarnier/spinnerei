@@ -1,5 +1,4 @@
-# Diagnose: vergangene Events auf kulturspinnerei.ch anschauen —
-# Beschreibung/Formatierung/Links, damit der Publish sie nachbildet.
+# Diagnose: Petzi-Webhook-Doku laden + Stand der petzi_tickets-Tabelle prüfen.
 name: Diagnose VPS
 
 on:
@@ -11,7 +10,7 @@ jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: Vergangene Events inspizieren
+      - name: Petzi-Doku + Ticket-Tabelle
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -20,13 +19,14 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
             set -uo pipefail
-            BASE=https://kulturspinnerei.ch
             CURL="docker run --rm curlimages/curl:8.10.1 -sS -L --max-time 20"
-            echo "=== Vergangene Events (Liste) ==="
-            $CURL "$BASE/wp-json/tribe/events/v1/events?start_date=2024-01-01&end_date=2026-08-04&per_page=4&_fields=id,title,url,website,cost,start_date,end_date" | head -c 2500 || true; echo
-            echo "=== Detail des neuesten vergangenen Events ==="
-            ID=$($CURL "$BASE/wp-json/tribe/events/v1/events?start_date=2024-01-01&end_date=2026-08-04&per_page=50" | tr ',' '\n' | grep -oE '"id":[0-9]+' | tail -1 | grep -oE '[0-9]+')
-            echo "Event-ID: ${ID:-keine gefunden}"
-            if [ -n "${ID:-}" ]; then
-              $CURL "$BASE/wp-json/tribe/events/v1/events/$ID" | head -c 6000 || true; echo
-            fi
+            echo "=== Petzi-Webhook-Doku (Text) ==="
+            $CURL "https://www.petzi.ch/en/member-center/docs/webhooks/" \
+              | sed -e 's/<script[^>]*>[^<]*<\/script>//g' -e 's/<style[^>]*>[^<]*<\/style>//g' -e 's/<[^>]*>/ /g' \
+              | tr -s ' \n' ' \n' | grep -vE '^\s*$' | head -c 9000 || true
+            echo
+            echo "=== petzi_tickets: Anzahl & letzte Einträge ==="
+            docker exec spinnerei-db psql -U spinnerei -d spinnerei -c 'SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE storniert) AS storniert FROM petzi_tickets;' 2>&1 || true
+            docker exec spinnerei-db psql -U spinnerei -d spinnerei -c 'SELECT "ticketNumber", "eventId", "eventTitel", kategorie, storniert, "createdAt" FROM petzi_tickets ORDER BY id DESC LIMIT 5;' 2>&1 || true
+            echo "=== App-Logs: petzi ==="
+            docker logs --since 4h spinnerei-app 2>&1 | grep -i petzi | tail -20 || echo "(keine petzi-Einträge in den Logs)"
