@@ -99,7 +99,10 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     end_date: ende,
     status: "draft",
   };
-  if (kosten) payload.cost = kosten;
+  // Kein cost-Feld: das Theme rendert es unschön ($-Zeichen) unter dem Titel —
+  // die Preise stehen bereits in der Info-Zeile der Beschreibung.
+  // Leerer String räumt das Feld bei bestehenden Events wieder ab.
+  payload.cost = "";
   if (anlass.petzilink) payload.website = anlass.petzilink;
 
   const ziel = anlass.wpEventId
