@@ -1,4 +1,4 @@
-# Diagnose: Acts + Details des Anlasses vom 09.10. (für Band-Infosheet).
+# Einmalig: Jarvis zum Admin machen, danach Kontrolle (nur Name/Rolle).
 name: Diagnose VPS
 
 on:
@@ -10,7 +10,7 @@ jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: Act-Details auslesen via SSH
+      - name: Jarvis zum Admin machen
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -19,12 +19,6 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
             set -uo pipefail
-            docker exec spinnerei-db psql -U spinnerei -d spinnerei -c "
-              SELECT a.name AS act, a.\"getIn\", a.soundcheck, a.showtime, a.\"kostenCents\", a.uebernachtung, a.\"anzahlPersonen\", a.driver
-              FROM acts a JOIN ressorts r ON r.id = a.\"ressortId\" JOIN anlaesse an ON an.id = r.\"anlassId\"
-              WHERE an.datum = '2026-10-09' ORDER BY a.showtime;"
-            docker exec spinnerei-db psql -U spinnerei -d spinnerei -c "
-              SELECT r.name, r.\"externeLeads\", string_agg(u.name, ', ') AS leads
-              FROM ressorts r LEFT JOIN ressort_leads rl ON rl.\"ressortId\" = r.id LEFT JOIN users u ON u.id = rl.\"userId\"
-              JOIN anlaesse an ON an.id = r.\"anlassId\" WHERE an.datum = '2026-10-09'
-              GROUP BY r.id ORDER BY r.reihenfolge;"
+            docker exec spinnerei-db psql -U spinnerei -d spinnerei -c "UPDATE users SET rolle = 'admin' WHERE name = 'Jarvis';"
+            echo "=== Kontrolle ==="
+            docker exec spinnerei-db psql -U spinnerei -d spinnerei -c "SELECT name, rolle, claimed FROM users WHERE name = 'Jarvis';"
