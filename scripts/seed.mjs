@@ -41,6 +41,7 @@ const KOLLEKTIV = [
   { name: "Alvi", farbe: "#6fcf7a" },
   { name: "Yves", farbe: "#e8a13c" },
   { name: "Laurin", farbe: "#5cc4c4" },
+  { name: "Jarvis", farbe: "#4f8cff" },
 ];
 
 const sql = postgres(url, { max: 1, prepare: false });
