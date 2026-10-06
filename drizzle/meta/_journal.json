@@ -162,6 +162,13 @@
       "when": 1785929761025,
       "tag": "0022_reflective_ikaris",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791313333199,
+      "tag": "0023_early_stryfe",
+      "breakpoints": true
     }
   ]
 }

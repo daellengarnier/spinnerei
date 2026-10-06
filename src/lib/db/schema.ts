@@ -54,6 +54,9 @@ export const anlaesse = pgTable("anlaesse", {
   wpEventId: integer("wpEventId"),
   // Wann zuletzt auf die Website publiziert wurde.
   wpPublishedAt: timestamp("wpPublishedAt", { withTimezone: true }),
+  // Token für den öffentlichen Ablauf/Rider-Link (für externe Ton-Leute);
+  // null = noch nie geteilt.
+  shareToken: text("shareToken").unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -421,6 +421,7 @@ function Uebersicht({
         )}
       </div>
       {werte.zugang === "oeffentlich" && <WebsitePublish anlass={anlass} />}
+      <AblaufTeilen anlass={anlass} />
       {error && <p className="err-box mt-2">{error}</p>}
       </div>
       )}
@@ -508,6 +509,67 @@ function WebsitePublish({ anlass }: { anlass: Anlass }) {
           )}
         </p>
       )}
+      {fehler && <p className="err-box mt-1.5">{fehler}</p>}
+    </div>
+  );
+}
+
+// Ablauf & Rider als öffentlichen Link teilen (für externe Ton-/Technik-Leute).
+// Telegram zuerst (t.me-Share), daneben Link kopieren.
+function AblaufTeilen({ anlass }: { anlass: Anlass }) {
+  const [busy, setBusy] = useState(false);
+  const [link, setLink] = useState("");
+  const [kopiert, setKopiert] = useState(false);
+  const [fehler, setFehler] = useState("");
+
+  const holen = async (): Promise<string> => {
+    if (link) return link;
+    const r = await api.post<{ url: string }>(`/anlaesse/${anlass.id}/share`, {});
+    setLink(r.url);
+    return r.url;
+  };
+
+  const telegram = async () => {
+    setBusy(true);
+    setFehler("");
+    try {
+      const url = await holen();
+      const text = `Ablauf & Rider für «${anlass.name}» am ${formatDate(anlass.datum)}:`;
+      window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, "_blank", "noopener");
+    } catch (e) {
+      setFehler((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const kopieren = async () => {
+    setBusy(true);
+    setFehler("");
+    try {
+      const url = await holen();
+      await navigator.clipboard.writeText(url);
+      setKopiert(true);
+      setTimeout(() => setKopiert(false), 2000);
+    } catch (e) {
+      setFehler((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 border-t border-line pt-2.5">
+      <p className="lbl mb-1.5">Ablauf &amp; Rider für Externe (z. B. Ton)</p>
+      <div className="flex gap-2">
+        <button className="btn-ghost flex-1 py-1.5 text-sm" onClick={telegram} disabled={busy}>
+          <Icon name="send" size={14} /> Per Telegram teilen
+        </button>
+        <button className="btn-ghost shrink-0 px-3 py-1.5 text-sm" onClick={kopieren} disabled={busy}>
+          {kopiert ? "Kopiert ✓" : "Link kopieren"}
+        </button>
+      </div>
+      {link && <p className="mt-1.5 break-all text-xs text-mute">{link}</p>}
       {fehler && <p className="err-box mt-1.5">{fehler}</p>}
     </div>
   );
