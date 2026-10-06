@@ -41,7 +41,7 @@ const KOLLEKTIV = [
   { name: "Alvi", farbe: "#6fcf7a" },
   { name: "Yves", farbe: "#e8a13c" },
   { name: "Laurin", farbe: "#5cc4c4" },
-  { name: "Jarvis", farbe: "#4f8cff" },
+  { name: "Jarvis", farbe: "#4f8cff", rolle: "admin" },
 ];
 
 const sql = postgres(url, { max: 1, prepare: false });
@@ -52,7 +52,7 @@ try {
     if (existing[0]) continue;
     await sql`
       INSERT INTO users (name, email, "passwordHash", rolle, "avatarColor", claimed, active)
-      VALUES (${person.name}, ${`${person.name.toLowerCase()}@platzhalter.local`}, ${""}, 'mitglied', ${person.farbe}, false, true)`;
+      VALUES (${person.name}, ${`${person.name.toLowerCase()}@platzhalter.local`}, ${""}, ${person.rolle ?? "mitglied"}, ${person.farbe}, false, true)`;
     console.log(`[seed] Profil für ${person.name} vorbereitet.`);
   }
 
