@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/apiClient";
 import { EmptyState, Modal, Spinner } from "./Ui";
+import { MENUS, menuText, type MenuKey } from "@/lib/menu";
 import { Icon } from "./Icon";
 import { formatChf } from "@/lib/finance";
 import type { Act } from "@/lib/uiTypes";
@@ -114,9 +115,12 @@ function ActCard({ act: a, onOpen }: { act: Act; onOpen: () => void }) {
               </span>
             )}
             {a.anzahlPersonen == null && a.driver && <span className="inline-flex items-center gap-1">eigener Driver</span>}
-            {a.essgewohnheiten && (
+            {(menuText({ fleisch: a.essenFleisch, vegi: a.essenVegi, vegan: a.essenVegan }) || a.essgewohnheiten) && (
               <span className="inline-flex items-center gap-1">
-                <Icon name="food" size={13} /> {a.essgewohnheiten}
+                <Icon name="food" size={13} />
+                {[menuText({ fleisch: a.essenFleisch, vegi: a.essenVegi, vegan: a.essenVegan }), a.essgewohnheiten && `Allergien: ${a.essgewohnheiten}`]
+                  .filter(Boolean)
+                  .join(" · ")}
               </span>
             )}
             {a.uebernachtung && (
@@ -162,6 +166,12 @@ function ActModal({
   const [anzahl, setAnzahl] = useState(act?.anzahlPersonen != null ? String(act.anzahlPersonen) : "");
   const [driver, setDriver] = useState(act?.driver ?? false);
   const [essgewohnheiten, setEssgewohnheiten] = useState(act?.essgewohnheiten ?? "");
+  const [menu, setMenu] = useState<Record<MenuKey, string>>({
+    fleisch: act?.essenFleisch != null ? String(act.essenFleisch) : "",
+    vegi: act?.essenVegi != null ? String(act.essenVegi) : "",
+    vegan: act?.essenVegan != null ? String(act.essenVegan) : "",
+  });
+  const menuZahl = (k: MenuKey) => (menu[k].trim() ? Number(menu[k]) : null);
   const [uebernachtung, setUebernachtung] = useState(act?.uebernachtung ?? false);
   const [promotext, setPromotext] = useState(act?.promotext ?? "");
   const [notiz, setNotiz] = useState(act?.notiz ?? "");
@@ -186,6 +196,9 @@ function ActModal({
       kostenCents: cents && cents > 0 ? cents : null,
       anzahlPersonen: anzahl.trim() ? Number(anzahl) : null,
       driver,
+      essenFleisch: menuZahl("fleisch"),
+      essenVegi: menuZahl("vegi"),
+      essenVegan: menuZahl("vegan"),
       essgewohnheiten: essgewohnheiten.trim(),
       uebernachtung,
       promotext: promotext.trim(),
@@ -258,12 +271,29 @@ function ActModal({
         </label>
 
         <div>
-          <label className="label">Essgewohnheiten</label>
+          <label className="label">Essen (Anzahl pro Menü)</label>
+          <div className="grid grid-cols-3 gap-3">
+            {MENUS.map((m) => (
+              <div key={m.key}>
+                <label className="label text-xs">{m.label}</label>
+                <input
+                  className="input"
+                  inputMode="numeric"
+                  value={menu[m.key]}
+                  onChange={(e) => setMenu((x) => ({ ...x, [m.key]: e.target.value }))}
+                  placeholder="0"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label className="label">Allergien / Unverträglichkeiten</label>
           <input
             className="input"
             value={essgewohnheiten}
             onChange={(e) => setEssgewohnheiten(e.target.value)}
-            placeholder="z. B. 2 vegi, 1 vegan, 1 laktosefrei"
+            placeholder="z. B. 1× Nüsse, 1× laktosefrei"
           />
           <p className="mt-1 text-xs text-dim">Erscheint in der Anlassübersicht beim Essen (Personen + Driver werden mitgezählt).</p>
         </div>

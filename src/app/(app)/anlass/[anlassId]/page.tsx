@@ -12,6 +12,7 @@ import { useAuth } from "@/components/AuthContext";
 import { useUsers } from "@/lib/useUsers";
 import { formatDate, relTime } from "@/lib/uiUtil";
 import type { RessortSummary } from "@/lib/uiTypes";
+import { MENUS, menuSumme, menuText, type Menu, type MenuKey } from "@/lib/menu";
 
 interface Anlass {
   id: number;
@@ -22,7 +23,9 @@ interface Anlass {
   essen: string;
   ende: string;
   mitEssen: boolean | null;
-  essenCrew: number | null;
+  crewFleisch: number | null;
+  crewVegi: number | null;
+  crewVegan: number | null;
   essenNotiz: string;
   petzilink: string;
   art: string;
@@ -45,7 +48,10 @@ interface AnlassAct {
   showtime: string;
   anzahlPersonen: number | null;
   driver: boolean;
-  essgewohnheiten: string;
+  essenFleisch: number | null;
+  essenVegi: number | null;
+  essenVegan: number | null;
+  essgewohnheiten: string; // Allergien
 }
 
 export default function AnlassDashboard() {
@@ -212,19 +218,24 @@ function Uebersicht({
     }
   };
 
-  const [essenCrew, setEssenCrew] = useState<number | null>(anlass.essenCrew);
-  const saveEssenCrew = async (eingabe: string) => {
+  const [crewMenu, setCrewMenu] = useState<Menu>({
+    fleisch: anlass.crewFleisch,
+    vegi: anlass.crewVegi,
+    vegan: anlass.crewVegan,
+  });
+  const CREW_FELD = { fleisch: "crewFleisch", vegi: "crewVegi", vegan: "crewVegan" } as const;
+  const saveCrewMenu = async (key: MenuKey, eingabe: string) => {
     const text = eingabe.trim();
-    const n = text === "" ? null : Number(text);
+    const n = text === "" || text === "0" ? null : Number(text);
     if (n !== null && (!Number.isInteger(n) || n < 0)) {
       setError("Crew: Anzahl Personen als ganze Zahl");
       return;
     }
-    if (n === essenCrew) return;
-    setEssenCrew(n);
+    if (n === crewMenu[key]) return;
+    setCrewMenu((m) => ({ ...m, [key]: n }));
     setError("");
     try {
-      await api.patch(`/anlaesse/${anlass.id}`, { essenCrew: n });
+      await api.patch(`/anlaesse/${anlass.id}`, { [CREW_FELD[key]]: n });
     } catch (e) {
       setError((e as Error).message);
     }
@@ -388,27 +399,29 @@ function Uebersicht({
         )}
       </div>
       {mitEssen === true && (
-        <div className="mt-2 flex items-end gap-2">
-          <div className="w-24 shrink-0">
-            <label className="label text-xs">Crew isst mit</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              className="input px-2 py-1.5 text-sm"
-              placeholder="Anzahl"
-              defaultValue={essenCrew != null ? String(essenCrew) : ""}
-              onBlur={(e) => saveEssenCrew(e.target.value)}
-            />
+        <div className="mt-2">
+          <label className="label text-xs">Crew isst mit (Anzahl pro Menü)</label>
+          <div className="grid grid-cols-3 gap-2">
+            {MENUS.map((m) => (
+              <input
+                key={m.key}
+                type="text"
+                inputMode="numeric"
+                aria-label={`Crew ${m.label}`}
+                className="input px-2 py-1.5 text-sm"
+                placeholder={m.label}
+                defaultValue={crewMenu[m.key] != null ? String(crewMenu[m.key]) : ""}
+                onBlur={(e) => saveCrewMenu(m.key, e.target.value)}
+              />
+            ))}
           </div>
-          <div className="min-w-0 flex-1">
-            <label className="label text-xs">Essgewohnheiten Crew / Hinweise Küche</label>
-            <input
-              className="input px-2 py-1.5 text-sm"
-              placeholder="z. B. 1 vegan, 1 glutenfrei"
-              defaultValue={werte.essenNotiz}
-              onBlur={(e) => e.target.value.trim() !== werte.essenNotiz && save("essenNotiz", e.target.value.trim())}
-            />
-          </div>
+          <label className="label mt-2 text-xs">Allergien Crew / Hinweise Küche</label>
+          <input
+            className="input px-2 py-1.5 text-sm"
+            placeholder="z. B. 1× Nüsse, 1× glutenfrei"
+            defaultValue={werte.essenNotiz}
+            onBlur={(e) => e.target.value.trim() !== werte.essenNotiz && save("essenNotiz", e.target.value.trim())}
+          />
         </div>
       )}
 
@@ -474,7 +487,7 @@ function Uebersicht({
       </div>
       )}
 
-      {mitEssen === true && <EssenInfo acts={sortierteActs} crew={essenCrew} crewNotiz={werte.essenNotiz} zeit={werte.essen} />}
+      {mitEssen === true && <EssenInfo acts={sortierteActs} crew={crewMenu} crewNotiz={werte.essenNotiz} zeit={werte.essen} />}
 
       {sortierteActs.length > 0 && (
         <div className="mt-3 border-t border-line pt-2.5">
@@ -503,16 +516,26 @@ function Uebersicht({
   );
 }
 
-// Essen auf einen Blick: wie viele essen mit (Acts inkl. Driver + Crew) und
-// welche speziellen Essgewohnheiten es gibt.
-function EssenInfo({ acts, crew, crewNotiz, zeit }: { acts: AnlassAct[]; crew: number | null; crewNotiz: string; zeit: string }) {
-  const personenAct = (a: AnlassAct) => (a.anzahlPersonen ?? 0) + (a.driver ? 1 : 0);
-  const total = acts.reduce((s, a) => s + personenAct(a), 0) + (crew ?? 0);
-  const offen = [...acts.filter((a) => a.anzahlPersonen == null).map((a) => a.name || "Unbenannter Act"), ...(crew == null ? ["Crew"] : [])];
-  const gewohnheiten = [
-    ...acts.filter((a) => a.essgewohnheiten).map((a) => ({ wer: a.name || "Unbenannter Act", was: a.essgewohnheiten })),
-    ...(crewNotiz ? [{ wer: "Crew", was: crewNotiz }] : []),
+// Essen auf einen Blick: wie viele essen mit (Acts inkl. Driver + Crew),
+// aufgeteilt nach Menü (Fleisch/Vegi/Vegan), plus alle Allergien.
+function EssenInfo({ acts, crew, crewNotiz, zeit }: { acts: AnlassAct[]; crew: Menu; crewNotiz: string; zeit: string }) {
+  const gruppen = [
+    ...acts.map((a) => ({
+      key: `act-${a.id}`,
+      wer: a.name || "Unbenannter Act",
+      personen: a.anzahlPersonen != null || a.driver ? (a.anzahlPersonen ?? 0) + (a.driver ? 1 : 0) : null,
+      menu: { fleisch: a.essenFleisch, vegi: a.essenVegi, vegan: a.essenVegan } as Menu,
+      allergien: a.essgewohnheiten,
+    })),
+    { key: "crew", wer: "Crew", personen: null as number | null, menu: crew, allergien: crewNotiz },
   ];
+  // Pro Gruppe essen max(Personenzahl, Summe der Menüs); der Rest ist „ohne Angabe".
+  const essen = (g: (typeof gruppen)[number]) => Math.max(g.personen ?? 0, menuSumme(g.menu));
+  const total = gruppen.reduce((s, g) => s + essen(g), 0);
+  const ohneAngabe = gruppen.reduce((s, g) => s + Math.max(0, (g.personen ?? 0) - menuSumme(g.menu)), 0);
+  const proMenu = MENUS.map((m) => ({ ...m, n: gruppen.reduce((s, g) => s + (g.menu[m.key] ?? 0), 0) }));
+  const offen = acts.filter((a) => a.anzahlPersonen == null).map((a) => a.name || "Unbenannter Act");
+  const allergien = gruppen.filter((g) => g.allergien);
 
   return (
     <div className="mt-3 border-t border-line pt-2.5">
@@ -522,26 +545,40 @@ function EssenInfo({ acts, crew, crewNotiz, zeit }: { acts: AnlassAct[]; crew: n
           Essen{zeit && <span className="tabular-nums"> {zeit}</span>}: <span className="font-semibold">{total} Personen</span>
         </span>
       </p>
-      <p className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-dim">
-        {acts.map((a) => (
-          <span key={a.id}>
-            {a.name || "Unbenannter Act"} {a.anzahlPersonen ?? "?"}
-            {a.driver && " + Driver"}
+      <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-sm">
+        {proMenu.map((m) => (
+          <span key={m.key}>
+            <span className="font-semibold tabular-nums text-ink">{m.n}</span> <span className="text-dim">{m.label}</span>
           </span>
         ))}
-        <span>Crew {crew ?? "?"}</span>
+        {ohneAngabe > 0 && (
+          <span>
+            <span className="font-semibold tabular-nums text-ink">{ohneAngabe}</span> <span className="text-dim">ohne Angabe</span>
+          </span>
+        )}
       </p>
-      {offen.length > 0 && <p className="mt-1 text-xs text-accent">Personenzahl noch offen: {offen.join(", ")}</p>}
-      {gewohnheiten.length > 0 ? (
-        <ul className="mt-1.5 space-y-0.5 text-xs">
-          {gewohnheiten.map((g) => (
-            <li key={g.wer}>
-              <span className="font-semibold text-ink">{g.wer}:</span> <span className="text-dim">{g.was}</span>
-            </li>
+      <div className="mt-1 space-y-0.5 text-xs text-dim">
+        {gruppen
+          .filter((g) => essen(g) > 0 || g.key !== "crew")
+          .map((g) => (
+            <p key={g.key}>
+              <span className="text-ink">{g.wer}</span> {g.personen ?? (g.key === "crew" ? essen(g) : "?")}
+              {menuText(g.menu) && <span> ({menuText(g.menu)})</span>}
+            </p>
           ))}
-        </ul>
+      </div>
+      {offen.length > 0 && <p className="mt-1 text-xs text-accent">Personenzahl noch offen: {offen.join(", ")}</p>}
+      {allergien.length > 0 ? (
+        <div className="mt-2 border border-terra/40 bg-terra-light px-2.5 py-1.5 text-xs">
+          <p className="font-semibold text-terra-dark">Allergien / Unverträglichkeiten</p>
+          {allergien.map((g) => (
+            <p key={g.key} className="text-terra-dark">
+              <span className="font-semibold">{g.wer}:</span> {g.allergien}
+            </p>
+          ))}
+        </div>
       ) : (
-        <p className="mt-1 text-xs text-mute">Keine speziellen Essgewohnheiten erfasst.</p>
+        <p className="mt-1 text-xs text-mute">Keine Allergien erfasst.</p>
       )}
     </div>
   );

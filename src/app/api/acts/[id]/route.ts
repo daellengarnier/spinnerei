@@ -39,6 +39,9 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   if (body?.uebernachtung !== undefined) patch.uebernachtung = !!body.uebernachtung;
   if (body?.anzahlPersonen !== undefined) patch.anzahlPersonen = toCount(body.anzahlPersonen);
   if (body?.driver !== undefined) patch.driver = !!body.driver;
+  if (body?.essenFleisch !== undefined) patch.essenFleisch = toCount(body.essenFleisch);
+  if (body?.essenVegi !== undefined) patch.essenVegi = toCount(body.essenVegi);
+  if (body?.essenVegan !== undefined) patch.essenVegan = toCount(body.essenVegan);
   if (body?.essgewohnheiten !== undefined) patch.essgewohnheiten = String(body.essgewohnheiten ?? "").trim();
   if (body?.drivelink !== undefined) patch.drivelink = String(body.drivelink ?? "").trim();
   if (body?.promotext !== undefined) patch.promotext = String(body.promotext ?? "").trim();

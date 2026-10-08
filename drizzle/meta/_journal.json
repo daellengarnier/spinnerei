@@ -176,6 +176,20 @@
       "when": 1791499732986,
       "tag": "0024_lying_jack_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791500280499,
+      "tag": "0025_thin_firelord",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791500281466,
+      "tag": "0026_boring_salo",
+      "breakpoints": true
     }
   ]
 }

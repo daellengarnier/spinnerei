@@ -125,7 +125,10 @@ export interface Act {
   uebernachtung: boolean;
   anzahlPersonen: number | null;
   driver: boolean;
-  essgewohnheiten: string;
+  essenFleisch: number | null;
+  essenVegi: number | null;
+  essenVegan: number | null;
+  essgewohnheiten: string; // Allergien / Unverträglichkeiten
   drivelink: string;
   promotext: string;
   notiz: string;

@@ -36,9 +36,11 @@ export const anlaesse = pgTable("anlaesse", {
   essen: text("essen").notNull().default(""),
   // Essen am Anlass: null = noch offen, true = mit (Zeit in essen), false = ohne.
   mitEssen: boolean("mitEssen"),
-  // Crew/Team, das mitisst (zusätzlich zu den Acts), null = offen.
-  essenCrew: integer("essenCrew"),
-  // Essgewohnheiten der Crew / Hinweise für die Küche (Freitext).
+  // Crew/Team, das mitisst (zusätzlich zu den Acts): Anzahl pro Menü.
+  crewFleisch: integer("crewFleisch"),
+  crewVegi: integer("crewVegi"),
+  crewVegan: integer("crewVegan"),
+  // Allergien der Crew / Hinweise für die Küche (Freitext).
   essenNotiz: text("essenNotiz").notNull().default(""),
   ende: text("ende").notNull().default(""),
   // Petzi-Ticketlink des Anlasses (Anlassübersicht).
@@ -302,7 +304,11 @@ export const acts = pgTable("acts", {
   anzahlPersonen: integer("anzahlPersonen"),
   // Band tourt mit eigenem Driver (zählt oft zusätzlich zur Bandgrösse).
   driver: boolean("driver").notNull().default(false),
-  // Spezielle Essgewohnheiten (z. B. „2 vegi, 1 vegan, 1 laktosefrei").
+  // Essen: Anzahl pro Menü (Rest der Personen = ohne Angabe).
+  essenFleisch: integer("essenFleisch"),
+  essenVegi: integer("essenVegi"),
+  essenVegan: integer("essenVegan"),
+  // Allergien / Unverträglichkeiten (Freitext, z. B. „1× Nüsse, 1× laktosefrei").
   essgewohnheiten: text("essgewohnheiten").notNull().default(""),
   // Link zum Drive-Ordner des Acts (Tech-/Hospitality-Rider etc. liegen im Drive).
   drivelink: text("drivelink").notNull().default(""),

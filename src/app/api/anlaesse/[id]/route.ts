@@ -32,6 +32,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
           showtime: acts.showtime,
           anzahlPersonen: acts.anzahlPersonen,
           driver: acts.driver,
+          essenFleisch: acts.essenFleisch,
+          essenVegi: acts.essenVegi,
+          essenVegan: acts.essenVegan,
           essgewohnheiten: acts.essgewohnheiten,
         })
         .from(acts)
@@ -78,7 +81,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return s === "" || /^\d{2}:\d{2}$/.test(s) ? s : null;
   };
 
-  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; mitEssen: boolean | null; essenCrew: number | null; essenNotiz: string; petzilink: string; art: string; zugang: string; drivelink: string; abendverantwortungUserId: number | null; normaltarifCents: number | null; solitarifCents: number | null }> = {};
+  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; mitEssen: boolean | null; crewFleisch: number | null; crewVegi: number | null; crewVegan: number | null; essenNotiz: string; petzilink: string; art: string; zugang: string; drivelink: string; abendverantwortungUserId: number | null; normaltarifCents: number | null; solitarifCents: number | null }> = {};
   if (body?.name !== undefined) {
     const name = String(body.name).trim();
     if (!name) return Response.json({ error: "Name darf nicht leer sein" }, { status: 400 });
@@ -96,12 +99,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       patch[feld] = wert;
     }
   }
-  if (body?.essenCrew !== undefined) {
-    const n = body.essenCrew === null || body.essenCrew === "" ? null : Number(body.essenCrew);
+  for (const feld of ["crewFleisch", "crewVegi", "crewVegan"] as const) {
+    if (body?.[feld] === undefined) continue;
+    const n = body[feld] === null || body[feld] === "" ? null : Number(body[feld]);
     if (n !== null && (!Number.isInteger(n) || n < 0 || n > 1000)) {
-      return Response.json({ error: "Crew: ganze Zahl oder leer" }, { status: 400 });
+      return Response.json({ error: "Crew: Anzahl als ganze Zahl oder leer" }, { status: 400 });
     }
-    patch.essenCrew = n;
+    patch[feld] = n || null;
   }
   if (body?.essenNotiz !== undefined) patch.essenNotiz = String(body.essenNotiz).trim();
   if (body?.mitEssen !== undefined) {
