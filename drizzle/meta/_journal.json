@@ -169,6 +169,13 @@
       "when": 1791313333199,
       "tag": "0023_early_stryfe",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791499732986,
+      "tag": "0024_lying_jack_flag",
+      "breakpoints": true
     }
   ]
 }

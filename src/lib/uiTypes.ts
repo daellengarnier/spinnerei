@@ -125,6 +125,7 @@ export interface Act {
   uebernachtung: boolean;
   anzahlPersonen: number | null;
   driver: boolean;
+  essgewohnheiten: string;
   drivelink: string;
   promotext: string;
   notiz: string;

@@ -30,6 +30,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
           getIn: acts.getIn,
           soundcheck: acts.soundcheck,
           showtime: acts.showtime,
+          anzahlPersonen: acts.anzahlPersonen,
+          driver: acts.driver,
+          essgewohnheiten: acts.essgewohnheiten,
         })
         .from(acts)
         .where(inArray(acts.ressortId, ressortIds))
@@ -75,7 +78,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return s === "" || /^\d{2}:\d{2}$/.test(s) ? s : null;
   };
 
-  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; mitEssen: boolean | null; petzilink: string; art: string; zugang: string; drivelink: string; abendverantwortungUserId: number | null; normaltarifCents: number | null; solitarifCents: number | null }> = {};
+  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; mitEssen: boolean | null; essenCrew: number | null; essenNotiz: string; petzilink: string; art: string; zugang: string; drivelink: string; abendverantwortungUserId: number | null; normaltarifCents: number | null; solitarifCents: number | null }> = {};
   if (body?.name !== undefined) {
     const name = String(body.name).trim();
     if (!name) return Response.json({ error: "Name darf nicht leer sein" }, { status: 400 });
@@ -93,6 +96,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       patch[feld] = wert;
     }
   }
+  if (body?.essenCrew !== undefined) {
+    const n = body.essenCrew === null || body.essenCrew === "" ? null : Number(body.essenCrew);
+    if (n !== null && (!Number.isInteger(n) || n < 0 || n > 1000)) {
+      return Response.json({ error: "Crew: ganze Zahl oder leer" }, { status: 400 });
+    }
+    patch.essenCrew = n;
+  }
+  if (body?.essenNotiz !== undefined) patch.essenNotiz = String(body.essenNotiz).trim();
   if (body?.mitEssen !== undefined) {
     if (body.mitEssen !== null && typeof body.mitEssen !== "boolean") {
       return Response.json({ error: "mitEssen: true, false oder null" }, { status: 400 });

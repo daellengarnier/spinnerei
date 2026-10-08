@@ -36,6 +36,10 @@ export const anlaesse = pgTable("anlaesse", {
   essen: text("essen").notNull().default(""),
   // Essen am Anlass: null = noch offen, true = mit (Zeit in essen), false = ohne.
   mitEssen: boolean("mitEssen"),
+  // Crew/Team, das mitisst (zusätzlich zu den Acts), null = offen.
+  essenCrew: integer("essenCrew"),
+  // Essgewohnheiten der Crew / Hinweise für die Küche (Freitext).
+  essenNotiz: text("essenNotiz").notNull().default(""),
   ende: text("ende").notNull().default(""),
   // Petzi-Ticketlink des Anlasses (Anlassübersicht).
   petzilink: text("petzilink").notNull().default(""),
@@ -298,6 +302,8 @@ export const acts = pgTable("acts", {
   anzahlPersonen: integer("anzahlPersonen"),
   // Band tourt mit eigenem Driver (zählt oft zusätzlich zur Bandgrösse).
   driver: boolean("driver").notNull().default(false),
+  // Spezielle Essgewohnheiten (z. B. „2 vegi, 1 vegan, 1 laktosefrei").
+  essgewohnheiten: text("essgewohnheiten").notNull().default(""),
   // Link zum Drive-Ordner des Acts (Tech-/Hospitality-Rider etc. liegen im Drive).
   drivelink: text("drivelink").notNull().default(""),
   promotext: text("promotext").notNull().default(""),

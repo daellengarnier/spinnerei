@@ -114,6 +114,11 @@ function ActCard({ act: a, onOpen }: { act: Act; onOpen: () => void }) {
               </span>
             )}
             {a.anzahlPersonen == null && a.driver && <span className="inline-flex items-center gap-1">eigener Driver</span>}
+            {a.essgewohnheiten && (
+              <span className="inline-flex items-center gap-1">
+                <Icon name="food" size={13} /> {a.essgewohnheiten}
+              </span>
+            )}
             {a.uebernachtung && (
               <span className="inline-flex items-center gap-1 text-accent-dark">
                 <Icon name="bed" size={14} /> Übernachtung
@@ -156,6 +161,7 @@ function ActModal({
   const [gage, setGage] = useState(act?.kostenCents != null ? (act.kostenCents / 100).toFixed(2) : "");
   const [anzahl, setAnzahl] = useState(act?.anzahlPersonen != null ? String(act.anzahlPersonen) : "");
   const [driver, setDriver] = useState(act?.driver ?? false);
+  const [essgewohnheiten, setEssgewohnheiten] = useState(act?.essgewohnheiten ?? "");
   const [uebernachtung, setUebernachtung] = useState(act?.uebernachtung ?? false);
   const [promotext, setPromotext] = useState(act?.promotext ?? "");
   const [notiz, setNotiz] = useState(act?.notiz ?? "");
@@ -180,6 +186,7 @@ function ActModal({
       kostenCents: cents && cents > 0 ? cents : null,
       anzahlPersonen: anzahl.trim() ? Number(anzahl) : null,
       driver,
+      essgewohnheiten: essgewohnheiten.trim(),
       uebernachtung,
       promotext: promotext.trim(),
       notiz: notiz.trim(),
@@ -249,6 +256,17 @@ function ActModal({
           <input type="checkbox" className="h-5 w-5 accent-accent" checked={driver} onChange={(e) => setDriver(e.target.checked)} />
           <span className="text-sm font-medium text-ink">Band kommt mit eigenem Driver</span>
         </label>
+
+        <div>
+          <label className="label">Essgewohnheiten</label>
+          <input
+            className="input"
+            value={essgewohnheiten}
+            onChange={(e) => setEssgewohnheiten(e.target.value)}
+            placeholder="z. B. 2 vegi, 1 vegan, 1 laktosefrei"
+          />
+          <p className="mt-1 text-xs text-dim">Erscheint in der Anlassübersicht beim Essen (Personen + Driver werden mitgezählt).</p>
+        </div>
 
         <div className="grid grid-cols-3 gap-3">
           <div>

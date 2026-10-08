@@ -22,6 +22,8 @@ interface Anlass {
   essen: string;
   ende: string;
   mitEssen: boolean | null;
+  essenCrew: number | null;
+  essenNotiz: string;
   petzilink: string;
   art: string;
   zugang: string;
@@ -41,6 +43,9 @@ interface AnlassAct {
   getIn: string;
   soundcheck: string;
   showtime: string;
+  anzahlPersonen: number | null;
+  driver: boolean;
+  essgewohnheiten: string;
 }
 
 export default function AnlassDashboard() {
@@ -179,6 +184,7 @@ function Uebersicht({
     art: anlass.art,
     zugang: anlass.zugang,
     drivelink: anlass.drivelink,
+    essenNotiz: anlass.essenNotiz,
   });
   const [error, setError] = useState("");
 
@@ -201,6 +207,24 @@ function Uebersicht({
     setError("");
     try {
       await api.patch(`/anlaesse/${anlass.id}`, { mitEssen: wert });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const [essenCrew, setEssenCrew] = useState<number | null>(anlass.essenCrew);
+  const saveEssenCrew = async (eingabe: string) => {
+    const text = eingabe.trim();
+    const n = text === "" ? null : Number(text);
+    if (n !== null && (!Number.isInteger(n) || n < 0)) {
+      setError("Crew: Anzahl Personen als ganze Zahl");
+      return;
+    }
+    if (n === essenCrew) return;
+    setEssenCrew(n);
+    setError("");
+    try {
+      await api.patch(`/anlaesse/${anlass.id}`, { essenCrew: n });
     } catch (e) {
       setError((e as Error).message);
     }
@@ -363,6 +387,30 @@ function Uebersicht({
           </div>
         )}
       </div>
+      {mitEssen === true && (
+        <div className="mt-2 flex items-end gap-2">
+          <div className="w-24 shrink-0">
+            <label className="label text-xs">Crew isst mit</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              className="input px-2 py-1.5 text-sm"
+              placeholder="Anzahl"
+              defaultValue={essenCrew != null ? String(essenCrew) : ""}
+              onBlur={(e) => saveEssenCrew(e.target.value)}
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <label className="label text-xs">Essgewohnheiten Crew / Hinweise Küche</label>
+            <input
+              className="input px-2 py-1.5 text-sm"
+              placeholder="z. B. 1 vegan, 1 glutenfrei"
+              defaultValue={werte.essenNotiz}
+              onBlur={(e) => e.target.value.trim() !== werte.essenNotiz && save("essenNotiz", e.target.value.trim())}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="mt-2 flex items-end gap-2">
         <div className="min-w-0 flex-1">
@@ -426,6 +474,8 @@ function Uebersicht({
       </div>
       )}
 
+      {mitEssen === true && <EssenInfo acts={sortierteActs} crew={essenCrew} crewNotiz={werte.essenNotiz} zeit={werte.essen} />}
+
       {sortierteActs.length > 0 && (
         <div className="mt-3 border-t border-line pt-2.5">
           <div className="space-y-1.5">
@@ -450,6 +500,50 @@ function Uebersicht({
         </p>
       )}
     </section>
+  );
+}
+
+// Essen auf einen Blick: wie viele essen mit (Acts inkl. Driver + Crew) und
+// welche speziellen Essgewohnheiten es gibt.
+function EssenInfo({ acts, crew, crewNotiz, zeit }: { acts: AnlassAct[]; crew: number | null; crewNotiz: string; zeit: string }) {
+  const personenAct = (a: AnlassAct) => (a.anzahlPersonen ?? 0) + (a.driver ? 1 : 0);
+  const total = acts.reduce((s, a) => s + personenAct(a), 0) + (crew ?? 0);
+  const offen = [...acts.filter((a) => a.anzahlPersonen == null).map((a) => a.name || "Unbenannter Act"), ...(crew == null ? ["Crew"] : [])];
+  const gewohnheiten = [
+    ...acts.filter((a) => a.essgewohnheiten).map((a) => ({ wer: a.name || "Unbenannter Act", was: a.essgewohnheiten })),
+    ...(crewNotiz ? [{ wer: "Crew", was: crewNotiz }] : []),
+  ];
+
+  return (
+    <div className="mt-3 border-t border-line pt-2.5">
+      <p className="flex items-center gap-1.5 text-sm text-ink">
+        <Icon name="food" size={15} className="text-accent" />
+        <span>
+          Essen{zeit && <span className="tabular-nums"> {zeit}</span>}: <span className="font-semibold">{total} Personen</span>
+        </span>
+      </p>
+      <p className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-dim">
+        {acts.map((a) => (
+          <span key={a.id}>
+            {a.name || "Unbenannter Act"} {a.anzahlPersonen ?? "?"}
+            {a.driver && " + Driver"}
+          </span>
+        ))}
+        <span>Crew {crew ?? "?"}</span>
+      </p>
+      {offen.length > 0 && <p className="mt-1 text-xs text-accent">Personenzahl noch offen: {offen.join(", ")}</p>}
+      {gewohnheiten.length > 0 ? (
+        <ul className="mt-1.5 space-y-0.5 text-xs">
+          {gewohnheiten.map((g) => (
+            <li key={g.wer}>
+              <span className="font-semibold text-ink">{g.wer}:</span> <span className="text-dim">{g.was}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-1 text-xs text-mute">Keine speziellen Essgewohnheiten erfasst.</p>
+      )}
+    </div>
   );
 }
 
