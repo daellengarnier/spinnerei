@@ -67,12 +67,13 @@ jobs:
           WP_USER: ${{ secrets.WP_USER }}
           WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
           PETZI_WEBHOOK_SECRET: ${{ secrets.PETZI_WEBHOOK_SECRET }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          envs: WP_URL,WP_USER,WP_APP_PASSWORD,PETZI_WEBHOOK_SECRET
+          envs: WP_URL,WP_USER,WP_APP_PASSWORD,PETZI_WEBHOOK_SECRET,GOOGLE_API_KEY
           script: |
             set -euo pipefail
             cd /opt/spinnerei
@@ -96,6 +97,16 @@ jobs:
             if ! grep -q PETZI_WEBHOOK_SECRET docker-compose.yml; then
               sed -i 's|^\(      WP_APP_PASSWORD: .*\)$|\1\n      PETZI_WEBHOOK_SECRET: ${PETZI_WEBHOOK_SECRET:-}|' docker-compose.yml
               echo "docker-compose.yml um Petzi-Variable ergänzt."
+            fi
+            # Google-API-Key (Drive, nur lesend) für die Rider-Links der Share-Seite.
+            if [ -n "${GOOGLE_API_KEY:-}" ]; then
+              grep -v '^GOOGLE_API_KEY=' .env > .env.tmp || true
+              printf 'GOOGLE_API_KEY=%s\n' "$GOOGLE_API_KEY" >> .env.tmp
+              mv .env.tmp .env
+            fi
+            if ! grep -q GOOGLE_API_KEY docker-compose.yml; then
+              sed -i 's|^\(      PETZI_WEBHOOK_SECRET: .*\)$|\1\n      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}|' docker-compose.yml
+              echo "docker-compose.yml um Google-API-Key ergänzt."
             fi
             docker compose pull
             docker compose up -d

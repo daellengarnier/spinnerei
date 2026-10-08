@@ -2,6 +2,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db/client";
 import { acts, anlaesse, ressorts } from "@/lib/db/schema";
+import { findRiderFolder } from "@/lib/drive";
 import { formatDateLong, istFolgetag } from "@/lib/uiUtil";
 
 // Öffentliche, token-geschützte Ablauf-Seite für externe Ton-/Technik-Leute:
@@ -39,6 +40,13 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
         .orderBy(asc(acts.showtime), asc(acts.name))
     : [];
 
+  // Pro Act direkt den „Riders“-Ordner im Drive verlinken (Fallback: Act- bzw. Anlass-Ordner).
+  const riderLinks = await Promise.all(
+    anlassActs.map((a) =>
+      findRiderFolder({ actName: a.name, actDrivelink: a.drivelink, anlassDrivelink: anlass.drivelink }),
+    ),
+  );
+
   const zeiten = [
     anlass.tueroeffnung && { label: "Türöffnung", zeit: anlass.tueroeffnung },
     anlass.mitEssen === true && anlass.essen && { label: "Essen", zeit: anlass.essen },
@@ -74,7 +82,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
           <p className="text-sm text-dim">Acts folgen — die Zeiten werden hier automatisch ergänzt.</p>
         ) : (
           <div className="divide-y divide-line">
-            {anlassActs.map((a) => (
+            {anlassActs.map((a, i) => (
               <div key={a.id} className="py-3 first:pt-0 last:pb-0">
                 <p className="font-semibold text-ink">
                   {a.showtime && <span className="brand-text mr-2 tabular-nums">{a.showtime}</span>}
@@ -88,14 +96,14 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
                   {a.soundcheck && <span>Soundcheck {a.soundcheck}</span>}
                   {a.anzahlPersonen != null && a.anzahlPersonen > 0 && <span>{a.anzahlPersonen} Personen</span>}
                 </p>
-                {(a.drivelink || anlass.drivelink) && (
+                {(riderLinks[i] || a.drivelink || anlass.drivelink) && (
                   <a
-                    href={a.drivelink || anlass.drivelink}
+                    href={riderLinks[i] || a.drivelink || anlass.drivelink}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-1.5 inline-block text-sm text-accent underline underline-offset-2"
                   >
-                    Tech-/Hospitality-Rider (Drive) →
+                    {riderLinks[i] ? "Rider-Ordner (Drive) →" : "Tech-/Hospitality-Rider (Drive) →"}
                   </a>
                 )}
               </div>

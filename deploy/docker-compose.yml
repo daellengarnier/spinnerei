@@ -45,6 +45,8 @@ services:
       WP_APP_PASSWORD: ${WP_APP_PASSWORD:-}
       # Petzi-Webhook (Ticketverkäufe); Wert in .env.
       PETZI_WEBHOOK_SECRET: ${PETZI_WEBHOOK_SECRET:-}
+      # Google Drive API-Key (nur lesend) für Rider-Links; Wert in .env.
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy
