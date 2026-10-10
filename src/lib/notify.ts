@@ -22,6 +22,7 @@ function refUrl(refTyp: string, refId: number): string {
   if (refTyp === "sitzung") return `/ressort/${refId}?tab=sitzungen`;
   if (refTyp === "booking") return `/ressort/${refId}?tab=anfragen`;
   if (refTyp === "anlass") return `/anlass/${refId}`;
+  if (refTyp === "anlass_chat") return `/anlass/${refId}?tab=chat`;
   return "/inbox";
 }
 

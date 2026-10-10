@@ -1,7 +1,7 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
-import { todos, todoAssignees, users, ressorts, subRessorts } from "@/lib/db/schema";
+import { anlaesse, todos, todoAssignees, users, ressorts, subRessorts } from "@/lib/db/schema";
 import { notifyMany } from "@/lib/notify";
 
 export async function assigneesFor(todoId: number) {
@@ -68,5 +68,17 @@ export async function todoWithDetail(id: number) {
           .limit(1)
       )[0] ?? null
     : null;
-  return { ...todo, assignees: await assigneesFor(id), ressort, subRessort };
+  const erstelltVonName = todo.erstelltVon
+    ? ((await db.select({ name: users.name }).from(users).where(eq(users.id, todo.erstelltVon)).limit(1))[0]?.name ?? null)
+    : null;
+  // Anlass: direkt am Todo oder über das Ressort.
+  const anlassId =
+    todo.anlassId ??
+    (todo.ressortId
+      ? ((await db.select({ a: ressorts.anlassId }).from(ressorts).where(eq(ressorts.id, todo.ressortId)).limit(1))[0]?.a ?? null)
+      : null);
+  const anlass = anlassId
+    ? ((await db.select({ id: anlaesse.id, name: anlaesse.name }).from(anlaesse).where(eq(anlaesse.id, anlassId)).limit(1))[0] ?? null)
+    : null;
+  return { ...todo, assignees: await assigneesFor(id), ressort, subRessort, erstelltVonName, anlass };
 }

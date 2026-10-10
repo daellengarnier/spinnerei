@@ -9,9 +9,12 @@ import {
   ressorts,
   todoAssignees,
   ressortLeads,
+  anlaesse,
 } from "@/lib/db/schema";
 import type { ParentTyp } from "@/lib/db/schema";
 import { allUsers, parseMentions, notifyMany, type NotifyInput } from "@/lib/notify";
+
+const PARENT_TYPEN: ParentTyp[] = ["todo", "ressort", "anlass"];
 
 async function commentsFor(parentTyp: ParentTyp, parentId: number) {
   const db = getDb();
@@ -47,10 +50,10 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const parentTyp = url.searchParams.get("parentTyp") as ParentTyp | null;
   const parentId = Number(url.searchParams.get("parentId"));
-  if ((parentTyp !== "todo" && parentTyp !== "ressort") || !parentId) {
-    return Response.json({ error: "parentTyp (todo|ressort) und parentId erforderlich" }, { status: 400 });
+  if (!PARENT_TYPEN.includes(parentTyp as ParentTyp) || !parentId) {
+    return Response.json({ error: "parentTyp (todo|ressort|anlass) und parentId erforderlich" }, { status: 400 });
   }
-  return Response.json({ comments: await commentsFor(parentTyp, parentId) });
+  return Response.json({ comments: await commentsFor(parentTyp as ParentTyp, parentId) });
 }
 
 export async function POST(request: Request) {
@@ -60,7 +63,7 @@ export async function POST(request: Request) {
   const parentTyp = body?.parentTyp as ParentTyp;
   const parentId = Number(body?.parentId);
   const text = String(body?.text ?? "").trim();
-  if ((parentTyp !== "todo" && parentTyp !== "ressort") || !parentId || !text) {
+  if (!PARENT_TYPEN.includes(parentTyp) || !parentId || !text) {
     return Response.json({ error: "parentTyp, parentId und text erforderlich" }, { status: 400 });
   }
   const db = getDb();
@@ -72,11 +75,17 @@ export async function POST(request: Request) {
     const t = await db.select({ titel: todos.titel }).from(todos).where(eq(todos.id, parentId)).limit(1);
     if (!t[0]) return Response.json({ error: "Todo nicht gefunden" }, { status: 404 });
     parentLabel = t[0].titel;
-  } else {
+  } else if (parentTyp === "ressort") {
     const r = await db.select({ name: ressorts.name }).from(ressorts).where(eq(ressorts.id, parentId)).limit(1);
     if (!r[0]) return Response.json({ error: "Ressort nicht gefunden" }, { status: 404 });
     parentLabel = r[0].name;
+  } else {
+    const a = await db.select({ name: anlaesse.name }).from(anlaesse).where(eq(anlaesse.id, parentId)).limit(1);
+    if (!a[0]) return Response.json({ error: "Anlass nicht gefunden" }, { status: 404 });
+    parentLabel = `Chat ${a[0].name}`;
   }
+  // Benachrichtigungen zum Chat führen direkt in den Chat-Tab des Anlasses.
+  const refTyp = parentTyp === "anlass" ? "anlass_chat" : parentTyp;
 
   const usersList = await allUsers();
   const mentions = parseMentions(text, usersList);
@@ -102,7 +111,7 @@ export async function POST(request: Request) {
       actorUserId: actorId,
       typ: "mention",
       text: `${author} hat dich erwähnt: „${parentLabel}"`,
-      refTyp: parentTyp,
+      refTyp,
       refId: parentId,
     });
     notified.add(uid);
@@ -113,7 +122,7 @@ export async function POST(request: Request) {
   if (parentTyp === "todo") {
     for (const r of await db.select({ userId: todoAssignees.userId }).from(todoAssignees).where(eq(todoAssignees.todoId, parentId)))
       interested.add(r.userId);
-  } else {
+  } else if (parentTyp === "ressort") {
     for (const r of await db.select({ userId: ressortLeads.userId }).from(ressortLeads).where(eq(ressortLeads.ressortId, parentId)))
       interested.add(r.userId);
   }
@@ -130,7 +139,7 @@ export async function POST(request: Request) {
       actorUserId: actorId,
       typ: "neuer_kommentar",
       text: `${author} hat kommentiert: „${parentLabel}"`,
-      refTyp: parentTyp,
+      refTyp,
       refId: parentId,
     });
     notified.add(uid);

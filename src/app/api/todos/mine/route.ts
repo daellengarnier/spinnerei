@@ -14,6 +14,7 @@ export async function GET() {
     .select({
       id: todos.id,
       ressortId: todos.ressortId,
+      anlassId: todos.anlassId,
       subRessortId: todos.subRessortId,
       titel: todos.titel,
       beschreibung: todos.beschreibung,
@@ -28,7 +29,7 @@ export async function GET() {
     .from(todoAssignees)
     .innerJoin(todos, eq(todos.id, todoAssignees.todoId))
     .leftJoin(ressorts, eq(ressorts.id, todos.ressortId))
-    .leftJoin(anlaesse, eq(anlaesse.id, ressorts.anlassId))
+    .leftJoin(anlaesse, eq(anlaesse.id, sql`coalesce(${ressorts.anlassId}, ${todos.anlassId})`))
     // Nach Herkunft gruppiert (Anlässe, dann HQ, dann persönliche Todos).
     .where(eq(todoAssignees.userId, uid))
     .orderBy(sql`${anlaesse.name} NULLS LAST`, asc(todos.ressortId), sql`${todos.fristDatum} NULLS LAST`);

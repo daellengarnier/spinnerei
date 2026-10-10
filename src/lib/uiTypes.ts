@@ -192,6 +192,8 @@ export interface Todo {
   // null = persönliches Todo ohne Anlass/Ressort
   ressortId: number | null;
   subRessortId: number | null;
+  // Todo direkt am Anlass (ohne Bereich)
+  anlassId?: number | null;
   titel: string;
   beschreibung: string;
   status: TodoStatus;
@@ -206,6 +208,8 @@ export interface Todo {
   ressortName?: string | null;
   ressortFarbe?: string | null;
   anlassName?: string | null;
+  erstelltVonName?: string | null;
+  anlass?: { id: number; name: string } | null;
 }
 
 export interface Comment {
@@ -216,6 +220,8 @@ export interface Comment {
   autorName: string | null;
   autorColor: string | null;
   mentions: { id: number; name: string }[];
+  // Im Anlass-Chat: Herkunft früherer Pinnwand-Beiträge
+  ressort?: { id: number; name: string; farbe: string } | null;
 }
 
 export interface ProtocolRef {

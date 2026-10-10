@@ -2,12 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/apiClient";
 import { Avatar, EmptyState, Modal, Spinner } from "@/components/Ui";
 import { Icon } from "@/components/Icon";
 import { ressortIcon } from "@/lib/ressortIcon";
-import { ressortHint } from "@/lib/ressortHint";
+import { AnlassTodos, AnlassTodoModal } from "@/components/AnlassTodos";
+import { CommentThread } from "@/components/CommentThread";
+import { Acts } from "@/components/Acts";
+import { Finanzen } from "@/components/Finanzen";
+import { Abrechnung } from "@/components/Abrechnung";
+import { formatChf } from "@/lib/finance";
 import { useAuth } from "@/components/AuthContext";
 import { useUsers } from "@/lib/useUsers";
 import { formatDate, relTime } from "@/lib/uiUtil";
@@ -54,16 +59,36 @@ interface AnlassAct {
   essgewohnheiten: string; // Allergien
 }
 
+type TabKey = "uebersicht" | "todos" | "chat" | "acts" | "geld";
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "uebersicht", label: "Übersicht" },
+  { key: "todos", label: "Todos" },
+  { key: "chat", label: "Chat" },
+  { key: "acts", label: "Acts" },
+  { key: "geld", label: "Geld" },
+];
+
+// Ein Anlass = Übersicht · Todos · Chat · Acts · Geld. Die bisherigen Ressorts
+// bleiben als «Bereiche» bestehen (Etiketten an Todos, eigene Seiten erreichbar
+// über die Übersicht) — es wird nichts verschoben oder gelöscht.
 export default function AnlassDashboard() {
   const params = useParams<{ anlassId: string }>();
   const anlassId = Number(params.anlassId);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabParam = searchParams.get("tab");
+  const tab: TabKey = TABS.some((t) => t.key === tabParam) ? (tabParam as TabKey) : "uebersicht";
+  const setTab = (t: TabKey) => router.replace(t === "uebersicht" ? "?" : `?tab=${t}`, { scroll: false });
+
   const { user } = useAuth();
   const [anlass, setAnlass] = useState<Anlass | null>(null);
   const [acts, setActs] = useState<AnlassAct[]>([]);
   const [verkaufteTickets, setVerkaufteTickets] = useState<number | null>(null);
   const [ressorts, setRessorts] = useState<RessortSummary[] | null>(null);
+  const [meineOffen, setMeineOffen] = useState(0);
   const [error, setError] = useState("");
   const [editOpen, setEditOpen] = useState(false);
+  const [todoEntwurf, setTodoEntwurf] = useState<string | null>(null);
 
   useEffect(() => {
     if (!anlassId) return;
@@ -81,8 +106,24 @@ export default function AnlassDashboard() {
       .catch((e) => setError((e as Error).message));
   }, [anlassId]);
 
+  // Zähler «für mich offen» am Todo-Tab.
+  useEffect(() => {
+    if (!anlassId || !user) return;
+    const zaehlen = () =>
+      api
+        .get<{ todos: { status: string; assignees: { id: number }[] }[] }>(`/anlaesse/${anlassId}/todos`)
+        .then((d) => setMeineOffen(d.todos.filter((t) => t.status !== "erledigt" && t.assignees.some((a) => a.id === user.id)).length))
+        .catch(() => {});
+    zaehlen();
+    window.addEventListener("spinnerei:anlass-todos", zaehlen);
+    return () => window.removeEventListener("spinnerei:anlass-todos", zaehlen);
+  }, [anlassId, user, tab]);
+
   if (error) return <p className="err-box">{error}</p>;
   if (!anlass) return <Spinner label="Lade Anlass …" />;
+
+  const actsRessort = ressorts?.find((r) => r.hatActs);
+  const finanzRessort = ressorts?.find((r) => r.hatFinanzen);
 
   return (
     <div className="space-y-4">
@@ -114,53 +155,125 @@ export default function AnlassDashboard() {
         />
       )}
 
-      <Uebersicht anlass={anlass} acts={acts} verkaufteTickets={verkaufteTickets} onSaved={(a) => setAnlass(a)} />
+      <nav className="seg flex overflow-x-auto p-0.5" aria-label="Anlass">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            className={`seg-item inline-flex flex-1 items-center justify-center gap-1 whitespace-nowrap px-2 py-1.5 text-sm ${tab === t.key ? "on" : ""}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+            {t.key === "todos" && meineOffen > 0 && (
+              <span className="count-badge" title={`${meineOffen} offene Todos für dich`}>
+                {meineOffen}
+              </span>
+            )}
+          </button>
+        ))}
+      </nav>
 
-      <div>
-        <h2 className="lbl mb-2 px-1">Ressorts</h2>
-        {!ressorts ? (
-          <Spinner label="Lade Ressorts …" />
-        ) : ressorts.length === 0 ? (
-          <EmptyState title="Noch keine Ressorts" hint={user?.rolle === "admin" ? "Lege im Admin-Bereich Ressorts an." : "Der Admin legt die Ressorts an."} />
+      {tab === "uebersicht" && (
+        <>
+          <Uebersicht anlass={anlass} acts={acts} verkaufteTickets={verkaufteTickets} onSaved={(a) => setAnlass(a)} />
+          <Bereiche ressorts={ressorts} isAdmin={user?.rolle === "admin"} />
+        </>
+      )}
+
+      {tab === "todos" && <AnlassTodos anlassId={anlassId} onNeu={() => setTodoEntwurf("")} />}
+
+      {tab === "chat" && (
+        <div className="card p-4">
+          <CommentThread parentTyp="anlass" parentId={anlassId} feedUrl={`/anlaesse/${anlassId}/chat`} onAsTodo={(text) => setTodoEntwurf(text)} />
+        </div>
+      )}
+
+      {tab === "acts" &&
+        (!ressorts ? (
+          <Spinner />
+        ) : actsRessort ? (
+          <Acts ressortId={actsRessort.id} />
         ) : (
-          <div className="card divide-y divide-line overflow-hidden">
-            {ressorts.map((r) => (
-              <Link key={r.id} href={`/ressort/${r.id}`} className="row-hover flex items-center gap-3 px-3 py-2.5">
-                <span
-                  className="grid h-9 w-9 shrink-0 place-items-center ring-1 ring-inset"
-                  style={{ background: `${r.farbe}1c`, color: r.farbe, borderColor: `${r.farbe}3a` }}
-                >
-                  <Icon name={ressortIcon(r.name)} size={19} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="min-w-0 truncate font-semibold text-ink">{r.name}</p>
-                    {(r.leads.length > 0 || r.externeLeads) && (
-                      <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-mute">
-                        {r.leads.map((l) => (
-                          <span key={l.id} className="inline-flex items-center gap-1">
-                            <Avatar name={l.name} color={l.avatarColor} size={14} userId={l.id} showName={false} />
-                            {l.name}
-                          </span>
-                        ))}
-                        {r.externeLeads && <span>{r.externeLeads}</span>}
-                      </span>
-                    )}
-                  </div>
-                  {ressortHint(r) && <p className="truncate text-xs text-mute">{ressortHint(r)}</p>}
-                </div>
-                {r.openTodos > 0 && (
-                  <span className="count-badge" title={`${r.openTodos} offene Todos`}>
-                    {r.openTodos}
-                  </span>
-                )}
-                <Icon name="chevron" size={16} className="shrink-0 text-mute" />
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
+          <EmptyState title="Kein Acts-Bereich" hint="Für diesen Anlass gibt es noch keinen Bereich «Acts»." />
+        ))}
+
+      {tab === "geld" && <Geld anlassId={anlassId} ressorts={ressorts} finanzRessortId={finanzRessort?.id ?? null} />}
+
+      {todoEntwurf !== null && (
+        <AnlassTodoModal
+          anlassId={anlassId}
+          initialTitel={todoEntwurf}
+          onClose={() => setTodoEntwurf(null)}
+          onSaved={() => {
+            setTodoEntwurf(null);
+            setTab("todos");
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+// Geld: Ausgaben (mit Beleg) und Abrechnung an einem Ort.
+function Geld({ anlassId, ressorts, finanzRessortId }: { anlassId: number; ressorts: RessortSummary[] | null; finanzRessortId: number | null }) {
+  const [ansicht, setAnsicht] = useState<"ausgaben" | "abrechnung">("abrechnung");
+  if (!ressorts) return <Spinner />;
+  return (
+    <div className="space-y-3">
+      <div className="seg flex p-0.5">
+        <button className={`seg-item flex-1 py-1.5 text-sm ${ansicht === "abrechnung" ? "on" : ""}`} onClick={() => setAnsicht("abrechnung")}>
+          Abrechnung
+        </button>
+        <button className={`seg-item flex-1 py-1.5 text-sm ${ansicht === "ausgaben" ? "on" : ""}`} onClick={() => setAnsicht("ausgaben")}>
+          Ausgaben &amp; Belege
+        </button>
+      </div>
+      {ansicht === "abrechnung" ? (
+        <Abrechnung anlassId={anlassId} />
+      ) : finanzRessortId ? (
+        <Finanzen ressortId={finanzRessortId} anlassId={anlassId} />
+      ) : (
+        <EmptyState title="Kein Finanz-Bereich" hint="Für diesen Anlass gibt es noch keinen Bereich «Finanzen»." />
+      )}
+    </div>
+  );
+}
+
+// Bereiche (die bisherigen Ressorts) mit Verantwortlichen — jeder Bereich hat
+// weiterhin seine eigene Seite (Pinnwand, Zeitplan, Einkauf …).
+function Bereiche({ ressorts, isAdmin }: { ressorts: RessortSummary[] | null; isAdmin: boolean }) {
+  if (!ressorts) return <Spinner label="Lade Bereiche …" />;
+  if (ressorts.length === 0)
+    return <EmptyState title="Noch keine Bereiche" hint={isAdmin ? "Lege im Admin-Bereich Bereiche an." : "Der Admin legt die Bereiche an."} />;
+  return (
+    <section className="card p-3.5">
+      <h2 className="block-title mb-2">Wer macht was</h2>
+      <div className="grid grid-cols-1 gap-0.5 sm:grid-cols-2">
+        {ressorts.map((r) => (
+          <Link key={r.id} href={`/ressort/${r.id}`} className="row-hover flex items-center gap-2 px-1 py-1.5 text-sm">
+            <span className="grid h-6 w-6 shrink-0 place-items-center" style={{ background: `${r.farbe}1c`, color: r.farbe }}>
+              <Icon name={ressortIcon(r.name)} size={14} />
+            </span>
+            <span className="min-w-0 truncate text-dim">{r.name}</span>
+            <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate font-semibold text-ink">
+              {r.leads.map((l) => (
+                <span key={l.id} className="inline-flex items-center gap-1">
+                  <Avatar name={l.name} color={l.avatarColor} size={14} userId={l.id} showName={false} />
+                  {l.name}
+                </span>
+              ))}
+              {r.externeLeads && <span>{r.externeLeads}</span>}
+              {r.leads.length === 0 && !r.externeLeads && <span className="font-normal text-mute">offen</span>}
+            </span>
+            {r.openTodos > 0 && (
+              <span className="count-badge" title={`${r.openTodos} offene Todos`}>
+                {r.openTodos}
+              </span>
+            )}
+            <Icon name="chevron" size={14} className="shrink-0 text-mute" />
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -285,20 +398,79 @@ function Uebersicht({
   ];
   const sortierteActs = [...acts].sort((a, b) => (a.showtime || "99:99").localeCompare(b.showtime || "99:99"));
 
-  // Alles ausgefüllt → Formular standardmässig eingeklappt; von Hand umschaltbar.
-  const [manuellOffen, setManuellOffen] = useState<boolean | null>(null);
-  const offen = manuellOffen ?? fehlend.length > 0;
+  // Die Übersicht ist immer sichtbar; das Formular öffnet sich nur zum Bearbeiten.
+  const [offen, setOffen] = useState(false);
+  const av = nutzer.find((u) => u.id === avId);
+  const preise = [
+    tarife.normaltarifCents != null && `${formatChf(tarife.normaltarifCents)}`,
+    tarife.solitarifCents != null && `Soli ${formatChf(tarife.solitarifCents)}`,
+  ].filter(Boolean);
+  const kacheln = [
+    { label: "Türöffnung", wert: werte.tueroeffnung },
+    ...(mitEssen === true ? [{ label: "Essen", wert: werte.essen }] : []),
+    { label: "Ende", wert: werte.ende },
+  ];
 
   return (
     <section className="card p-3.5">
-      <button className="flex w-full items-center justify-between gap-3" onClick={() => setManuellOffen(!offen)}>
+      <div className="flex items-center justify-between gap-3">
         <h2 className="block-title">Anlassübersicht</h2>
-        <Icon name="chevron" size={16} className={`text-mute transition-transform ${offen ? "-rotate-90" : "rotate-90"}`} />
-      </button>
-      {verkaufteTickets != null && (
-        <p className="mt-1 text-xs text-dim">
-          <span className="font-semibold text-ink">{verkaufteTickets}</span> Tickets verkauft (Petzi)
-        </p>
+        <button className="btn-ghost px-2.5 py-1 text-xs" onClick={() => setOffen(!offen)}>
+          <Icon name={offen ? "check" : "pencil"} size={13} /> {offen ? "Fertig" : "Bearbeiten"}
+        </button>
+      </div>
+
+      {!offen && fehlend.length > 0 && (
+        <button
+          onClick={() => setOffen(true)}
+          className="mt-2 block w-full border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-left text-xs text-accent"
+        >
+          Noch offen: {fehlend.join(", ")} — tippen zum Ergänzen.
+        </button>
+      )}
+
+      {!offen && (
+        <div className="mt-2.5 space-y-2">
+          <div className={`grid gap-2 ${kacheln.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+            {kacheln.map((k) => (
+              <div key={k.label} className="border border-line bg-surface2 px-2.5 py-2">
+                <p className="lbl text-[10px]">{k.label}</p>
+                <p className="text-lg font-bold tabular-nums text-ink">{k.wert || "–"}</p>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+            <p>
+              <span className="block text-[11px] text-dim">Tickets (Petzi)</span>
+              <span className="font-semibold text-ink">{verkaufteTickets != null ? `${verkaufteTickets} verkauft` : "–"}</span>
+            </p>
+            <p>
+              <span className="block text-[11px] text-dim">Abendverantwortung</span>
+              <span className="font-semibold text-ink">{av?.name ?? "–"}</span>
+            </p>
+            <p>
+              <span className="block text-[11px] text-dim">Preise</span>
+              <span className="text-ink">{preise.length ? preise.join(" / ") : "–"}</span>
+            </p>
+            <p>
+              <span className="block text-[11px] text-dim">{[werte.art, werte.zugang === "oeffentlich" ? "öffentlich" : werte.zugang === "privat" ? "privat" : ""].filter(Boolean).join(" · ") || "Links"}</span>
+              <span className="flex gap-3">
+                {werte.drivelink ? (
+                  <a href={werte.drivelink} target="_blank" rel="noopener noreferrer" className="text-accent">
+                    Drive
+                  </a>
+                ) : null}
+                {werte.petzilink ? (
+                  <a href={werte.petzilink} target="_blank" rel="noopener noreferrer" className="text-accent">
+                    Petzi
+                  </a>
+                ) : null}
+                {!werte.drivelink && !werte.petzilink && <span className="text-dim">–</span>}
+              </span>
+            </p>
+          </div>
+          <AblaufTeilen anlass={anlass} />
+        </div>
       )}
 
       {offen && (
@@ -482,10 +654,12 @@ function Uebersicht({
         )}
       </div>
       {werte.zugang === "oeffentlich" && <WebsitePublish anlass={anlass} />}
-      <AblaufTeilen anlass={anlass} />
-      {error && <p className="err-box mt-2">{error}</p>}
+      <button className="btn-primary mt-3 w-full" onClick={() => setOffen(false)}>
+        Fertig
+      </button>
       </div>
       )}
+      {error && <p className="err-box mt-2">{error}</p>}
 
       {mitEssen === true && <EssenInfo acts={sortierteActs} crew={crewMenu} crewNotiz={werte.essenNotiz} zeit={werte.essen} />}
 
@@ -493,7 +667,7 @@ function Uebersicht({
         <div className="mt-3 border-t border-line pt-2.5">
           <div className="space-y-1.5">
             {sortierteActs.map((a) => (
-              <Link key={a.id} href={`/ressort/${a.ressortId}`} className="row-hover flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-1 py-1">
+              <Link key={a.id} href="?tab=acts" className="row-hover flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-1 py-1">
                 <span className="min-w-0 flex-1 truncate font-semibold text-ink">
                   {a.showtime && <span className="brand-text mr-2 tabular-nums">{a.showtime}</span>}
                   {a.name || "Unbenannter Act"}
@@ -509,7 +683,7 @@ function Uebersicht({
       )}
       {sortierteActs.length === 0 && (
         <p className="mt-3 border-t border-line pt-2.5 text-xs text-mute">
-          Sobald im Ressort «Acts» Acts mit Zeiten (Load-in, Soundcheck, Showtime) erfasst sind, erscheinen sie hier automatisch.
+          Sobald im Tab «Acts» Acts mit Zeiten (Load-in, Soundcheck, Showtime) erfasst sind, erscheinen sie hier automatisch.
         </p>
       )}
     </section>

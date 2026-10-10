@@ -22,6 +22,7 @@ function targetPath(it: ActivityItem): string {
   if (it.refTyp === "sitzung") return `/ressort/${it.refId}?tab=sitzungen`;
   if (it.refTyp === "booking") return `/ressort/${it.refId}?tab=anfragen`;
   if (it.refTyp === "anlass") return `/anlass/${it.refId}`;
+  if (it.refTyp === "anlass_chat") return `/anlass/${it.refId}?tab=chat`;
   return "/";
 }
 

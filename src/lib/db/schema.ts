@@ -22,7 +22,8 @@ export type TodoStatus = "offen" | "in_arbeit" | "erledigt";
 export type Verfuegbarkeit = "ja" | "vielleicht" | "nein";
 export type MeetingStatus = "umfrage_laeuft" | "terminFixiert" | "erledigt";
 export type ActivityTyp = "mention" | "zuweisung" | "neuer_kommentar" | "sitzung" | "neuer_anlass" | "av_check" | "booking";
-export type ParentTyp = "todo" | "ressort";
+// "anlass" = Chat des Anlasses (parentId = anlassId).
+export type ParentTyp = "todo" | "ressort" | "anlass";
 
 // Ein Anlass = ein Event in der Spinnerei (Hausfest, Konzert, Kinderdisco, …).
 // Spaltennamen snake_case, weil die Tabelle aus der ersten App-Version stammt.
@@ -380,6 +381,9 @@ export const todos = pgTable("todos", {
   subRessortId: integer("subRessortId").references(() => subRessorts.id, {
     onDelete: "set null",
   }),
+  // Todo direkt am Anlass (ohne Bereich/Ressort). Todos mit ressortId gehören
+  // über das Ressort zum Anlass; dieses Feld bleibt dort leer.
+  anlassId: integer("anlassId").references(() => anlaesse.id, { onDelete: "cascade" }),
   titel: text("titel").notNull(),
   beschreibung: text("beschreibung").notNull().default(""),
   status: text("status").$type<TodoStatus>().notNull().default("offen"),

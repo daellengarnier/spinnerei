@@ -62,13 +62,27 @@ export default function TodoPage() {
   return (
     <div className="space-y-4">
       <div className="card p-4">
-        {todo.ressort && (
-          <Link href={`/ressort/${todo.ressort.id}`} className="inline-flex items-center gap-1 text-sm" style={{ color: todo.ressort.farbe }}>
-            ← {todo.ressort.name}
-            {todo.subRessort && <span className="text-dim"> / {todo.subRessort.name}</span>}
+        {todo.anlass ? (
+          <Link href={`/anlass/${todo.anlass.id}?tab=todos`} className="inline-flex flex-wrap items-center gap-1.5 text-sm text-accent">
+            ← {todo.anlass.name}
+            {todo.ressort && (
+              <span className="inline-flex items-center gap-1 text-dim">
+                · <span className="h-1.5 w-1.5" style={{ background: todo.ressort.farbe }} />
+                {todo.ressort.name}
+                {todo.subRessort && <> / {todo.subRessort.name}</>}
+              </span>
+            )}
           </Link>
+        ) : (
+          todo.ressort && (
+            <Link href={`/ressort/${todo.ressort.id}`} className="inline-flex items-center gap-1 text-sm" style={{ color: todo.ressort.farbe }}>
+              ← {todo.ressort.name}
+              {todo.subRessort && <span className="text-dim"> / {todo.subRessort.name}</span>}
+            </Link>
+          )
         )}
         <h1 className="mt-1 text-xl font-bold">{todo.titel}</h1>
+        {todo.erstelltVonName && <p className="mt-0.5 text-xs text-dim">Erstellt von {todo.erstelltVonName}</p>}
         {todo.beschreibung && <p className="mt-2 whitespace-pre-wrap text-sm text-dim">{todo.beschreibung}</p>}
 
         <div className="mt-4">

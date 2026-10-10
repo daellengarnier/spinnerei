@@ -9,7 +9,20 @@ import { Icon } from "./Icon";
 import { relTime } from "@/lib/uiUtil";
 import type { Comment, UserLite } from "@/lib/uiTypes";
 
-export function CommentThread({ parentTyp, parentId }: { parentTyp: "todo" | "ressort"; parentId: number }) {
+// feedUrl: alternative Quelle für den Verlauf (z. B. Anlass-Chat inkl. alter
+// Pinnwand-Beiträge); geschrieben wird immer an parentTyp/parentId.
+// onAsTodo: zeigt bei jeder Nachricht «Als Todo» an.
+export function CommentThread({
+  parentTyp,
+  parentId,
+  feedUrl,
+  onAsTodo,
+}: {
+  parentTyp: "todo" | "ressort" | "anlass";
+  parentId: number;
+  feedUrl?: string;
+  onAsTodo?: (text: string) => void;
+}) {
   const { user } = useAuth();
   const users = useUsers();
   const [comments, setComments] = useState<Comment[] | null>(null);
@@ -21,7 +34,7 @@ export function CommentThread({ parentTyp, parentId }: { parentTyp: "todo" | "re
 
   const load = () =>
     api
-      .get<{ comments: Comment[] }>(`/comments?parentTyp=${parentTyp}&parentId=${parentId}`)
+      .get<{ comments: Comment[] }>(feedUrl ?? `/comments?parentTyp=${parentTyp}&parentId=${parentId}`)
       .then((d) => setComments(d.comments))
       .catch(() => setComments([]));
 
@@ -31,7 +44,7 @@ export function CommentThread({ parentTyp, parentId }: { parentTyp: "todo" | "re
     const id = setInterval(load, 15000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parentTyp, parentId]);
+  }, [parentTyp, parentId, feedUrl]);
 
   const detectMention = (value: string, caret: number) => {
     const upto = value.slice(0, caret);
@@ -106,12 +119,26 @@ export function CommentThread({ parentTyp, parentId }: { parentTyp: "todo" | "re
                       {mine && " (du)"}
                     </span>
                     <span className="text-xs text-dim">{relTime(c.createdAt)}</span>
+                    {c.ressort && (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-dim" title="Früherer Pinnwand-Beitrag">
+                        <span className="h-1.5 w-1.5" style={{ background: c.ressort.farbe }} />
+                        {c.ressort.name}
+                      </span>
+                    )}
+                    {onAsTodo && (
+                      <button
+                        onClick={() => onAsTodo(c.text)}
+                        className="ml-auto shrink-0 px-1.5 py-0.5 text-[11px] font-semibold text-accent hover:bg-surface2"
+                      >
+                        Als Todo
+                      </button>
+                    )}
                     <button
                       onClick={async () => {
                         await api.del(`/comments/${c.id}`);
                         load();
                       }}
-                      className="ml-auto shrink-0  p-1 text-mute hover:bg-terra-light hover:text-red-500"
+                      className={`${onAsTodo ? "" : "ml-auto "}shrink-0 p-1 text-mute hover:bg-terra-light hover:text-red-500`}
                       aria-label="Löschen"
                     >
                       <Icon name="trash" size={14} />

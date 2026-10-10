@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { requireUser, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
-import { ressorts, todos } from "@/lib/db/schema";
+import { anlaesse, ressorts, todos } from "@/lib/db/schema";
 import type { TodoStatus } from "@/lib/db/schema";
 import { setAssignees, todoWithDetail } from "@/lib/todoHelpers";
 
@@ -13,6 +13,8 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   // Ohne ressortId = persönliches Todo (aus «Meine Sachen»), ohne Anlass-Bezug.
   const ressortId = body?.ressortId ? Number(body.ressortId) : null;
+  // Ohne Ressort, aber mit anlassId = Todo direkt am Anlass (ohne Bereich).
+  const anlassId = ressortId === null && body?.anlassId ? Number(body.anlassId) : null;
   const titel = String(body?.titel ?? "").trim();
   if (!titel) return Response.json({ error: "titel erforderlich" }, { status: 400 });
 
@@ -21,12 +23,17 @@ export async function POST(request: Request) {
     const ressort = await db.select({ id: ressorts.id }).from(ressorts).where(eq(ressorts.id, ressortId)).limit(1);
     if (!ressort[0]) return Response.json({ error: "Ressort nicht gefunden" }, { status: 404 });
   }
+  if (anlassId !== null) {
+    const anlass = await db.select({ id: anlaesse.id }).from(anlaesse).where(eq(anlaesse.id, anlassId)).limit(1);
+    if (!anlass[0]) return Response.json({ error: "Anlass nicht gefunden" }, { status: 404 });
+  }
 
   const status: TodoStatus = STATUS.includes(body?.status) ? body.status : "offen";
   const inserted = await db
     .insert(todos)
     .values({
       ressortId,
+      anlassId,
       subRessortId: ressortId !== null && body?.subRessortId ? Number(body.subRessortId) : null,
       titel,
       beschreibung: String(body?.beschreibung ?? ""),

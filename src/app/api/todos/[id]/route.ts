@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { requireUser, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
-import { todos } from "@/lib/db/schema";
+import { ressorts, todos } from "@/lib/db/schema";
 import type { TodoStatus } from "@/lib/db/schema";
 import { setAssignees, todoWithDetail } from "@/lib/todoHelpers";
 
@@ -22,7 +22,11 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   const { id } = await ctx.params;
   const todoId = Number(id);
   const db = getDb();
-  const rows = await db.select({ id: todos.id, titel: todos.titel }).from(todos).where(eq(todos.id, todoId)).limit(1);
+  const rows = await db
+    .select({ id: todos.id, titel: todos.titel, ressortId: todos.ressortId, anlassId: todos.anlassId })
+    .from(todos)
+    .where(eq(todos.id, todoId))
+    .limit(1);
   const existing = rows[0];
   if (!existing) return Response.json({ error: "Todo nicht gefunden" }, { status: 404 });
 
@@ -33,6 +37,28 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   if (body?.status !== undefined && STATUS.includes(body.status)) patch.status = body.status;
   if (body?.fristDatum !== undefined) patch.fristDatum = body.fristDatum || null;
   if (body?.subRessortId !== undefined) patch.subRessortId = body.subRessortId ? Number(body.subRessortId) : null;
+  // Bereich wechseln (nur innerhalb desselben Anlasses): ressortId setzen oder
+  // leeren; ohne Bereich hängt das Todo direkt am Anlass.
+  if (body?.ressortId !== undefined) {
+    const anlassVon = async (rid: number | null) =>
+      rid ? ((await db.select({ a: ressorts.anlassId }).from(ressorts).where(eq(ressorts.id, rid)).limit(1))[0]?.a ?? null) : null;
+    const todoAnlass = existing.anlassId ?? (await anlassVon(existing.ressortId));
+    if (todoAnlass !== null) {
+      const ziel = body.ressortId ? Number(body.ressortId) : null;
+      if (ziel === null) {
+        patch.ressortId = null;
+        patch.subRessortId = null;
+        patch.anlassId = todoAnlass;
+      } else if (ziel !== existing.ressortId) {
+        if ((await anlassVon(ziel)) !== todoAnlass) {
+          return Response.json({ error: "Bereich gehört nicht zu diesem Anlass" }, { status: 400 });
+        }
+        patch.ressortId = ziel;
+        patch.subRessortId = null;
+        patch.anlassId = null;
+      }
+    }
+  }
   patch.updatedAt = new Date();
   await db.update(todos).set(patch).where(eq(todos.id, todoId));
 

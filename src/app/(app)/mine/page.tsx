@@ -14,7 +14,7 @@ interface MentionRow {
   commentId: number;
   text: string;
   createdAt: string;
-  parentTyp: "todo" | "ressort";
+  parentTyp: "todo" | "ressort" | "anlass";
   parentId: number;
   autorName: string | null;
 }
@@ -67,7 +67,7 @@ export default function MinePage() {
                 <p className="px-4 py-3 text-sm text-dim">Alles erledigt.</p>
               ) : (
                 openAssigned.map((t, i) => (
-                  <TodoRowWithRessort key={t.id} todo={t} showRessort={i === 0 || openAssigned[i - 1].ressortId !== t.ressortId} onChanged={load} />
+                  <TodoRowWithRessort key={t.id} todo={t} showRessort={i === 0 || gruppe(openAssigned[i - 1]) !== gruppe(t)} onChanged={load} />
                 ))
               )}
             </div>
@@ -76,7 +76,7 @@ export default function MinePage() {
                 <h3 className="mb-2 px-1 text-sm font-semibold text-dim">Erledigt</h3>
                 <div className="card divide-y divide-line overflow-hidden opacity-70">
                   {doneAssigned.map((t, i) => (
-                    <TodoRowWithRessort key={t.id} todo={t} showRessort={i === 0 || doneAssigned[i - 1].ressortId !== t.ressortId} onChanged={load} />
+                    <TodoRowWithRessort key={t.id} todo={t} showRessort={i === 0 || gruppe(doneAssigned[i - 1]) !== gruppe(t)} onChanged={load} />
                   ))}
                 </div>
               </div>
@@ -90,7 +90,13 @@ export default function MinePage() {
           {mentioned.map((m) => (
             <Link
               key={m.commentId}
-              href={m.parentTyp === "todo" ? `/todo/${m.parentId}` : `/ressort/${m.parentId}?tab=pinnwand`}
+              href={
+                m.parentTyp === "todo"
+                  ? `/todo/${m.parentId}`
+                  : m.parentTyp === "anlass"
+                    ? `/anlass/${m.parentId}?tab=chat`
+                    : `/ressort/${m.parentId}?tab=pinnwand`
+              }
               className="block px-4 py-3 active:bg-surface2"
             >
               <div className="flex items-baseline justify-between">
@@ -146,19 +152,17 @@ function NeuesTodoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
       .get<{ ressorts: { id: number; name: string }[] }>(`/ressorts?anlass=${anlassId}`)
       .then((d) => {
         setRessorts(d.ressorts);
-        if (d.ressorts[0]) setRessortId(d.ressorts[0].id);
       })
       .catch((e) => setError((e as Error).message));
   }, [anlassId]);
 
   const save = async () => {
     if (!titel.trim()) return setError("Titel erforderlich");
-    if (anlassId && !ressortId) return setError("Ressort wählen");
     setSaving(true);
     setError("");
     try {
       await api.post("/todos", {
-        ...(anlassId && ressortId ? { ressortId } : {}),
+        ...(anlassId ? (ressortId ? { ressortId } : { anlassId }) : {}),
         titel: titel.trim(),
         beschreibung,
         fristDatum: fristDatum || null,
@@ -207,8 +211,9 @@ function NeuesTodoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
           </div>
           {anlassId && (
             <div>
-              <label className="label">Ressort</label>
-              <select className="input" value={ressortId ?? ""} onChange={(e) => setRessortId(Number(e.target.value))} disabled={!ressorts}>
+              <label className="label">Bereich</label>
+              <select className="input" value={ressortId ?? ""} onChange={(e) => setRessortId(e.target.value ? Number(e.target.value) : null)} disabled={!ressorts}>
+                <option value="">— kein Bereich —</option>
                 {(ressorts ?? []).map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name}
@@ -227,8 +232,8 @@ function NeuesTodoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
           <textarea className="input min-h-[80px] resize-y text-sm" value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} />
         </div>
         <p className="text-xs text-dim">
-          Das Todo wird dir automatisch zugewiesen. Ohne Anlass bleibt es persönlich — wählst du einen Anlass, erscheint es auch im gewählten
-          Ressort.
+          Das Todo wird dir automatisch zugewiesen. Ohne Anlass bleibt es persönlich — wählst du einen Anlass, erscheint es auch in
+          dessen Todo-Liste.
         </p>
         {error && <p className="err-box">{error}</p>}
       </div>
@@ -236,10 +241,13 @@ function NeuesTodoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
   );
 }
 
+// Gruppierung: gleiches Ressort bzw. (ohne Ressort) gleicher Anlass.
+const gruppe = (t: Todo) => `${t.ressortId ?? ""}|${t.anlassName ?? ""}`;
+
 // Gruppen-Header: woher das Todo kommt — «Anlass · Ressort», «HQ · Ressort»
 // oder «Sonstige Todos» für persönliche Todos ohne Anlass.
 function herkunftLabel(todo: Todo): string {
-  if (!todo.ressortName) return "Sonstige Todos";
+  if (!todo.ressortName) return todo.anlassName ?? "Sonstige Todos";
   return `${todo.anlassName ?? "HQ"} · ${todo.ressortName}`;
 }
 

@@ -1,0 +1,2 @@
+ALTER TABLE "todos" ADD COLUMN "anlassId" integer;--> statement-breakpoint
+ALTER TABLE "todos" ADD CONSTRAINT "todos_anlassId_anlaesse_id_fk" FOREIGN KEY ("anlassId") REFERENCES "public"."anlaesse"("id") ON DELETE cascade ON UPDATE no action;
