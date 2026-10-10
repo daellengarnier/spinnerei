@@ -4,7 +4,11 @@
 //   SumUp/Twint:   Kartenzahlung Total (Abend & Nacht) kommt aus dem SumUp-
 //                  Report. Twint separat. Gebühr = 2 % auf (Karten + Twint).
 //   Abendkasse:    Gewinn Kasse = Endstock − Anfangsstock (Bargeld Eingang).
-//                  Plus die dort getätigten Kartenzahlungen = Total Abendkasse.
+//                  Kartenzahlungen Abendkasse werden aus den gezählten
+//                  Eintritten berechnet: Eintritte AK (CHF) − Gewinn Kasse.
+//                  Ein manuell erfasster Wert (z. B. laut SumUp-Gerät) hat
+//                  Vorrang — so bleiben bestehende Abrechnungen unverändert.
+//                  Gewinn Kasse + Kartenzahlungen = Total Abendkasse.
 //   Bar unten:     Kartenzahlungen werden NICHT ausgefüllt, sondern berechnet:
 //                  Karten Total − Abendkasse-Karten. Umsatz = (Endstock −
 //                  Anfangsstock) + Bar-Karten. Warenkosten = 40 % vom Umsatz.
@@ -66,6 +70,10 @@ export function leereAbrechnung(): AbrechnungDaten {
 }
 
 export interface AbrechnungBerechnet {
+  // Kartenzahlungen Abendkasse: verwendet (manuell oder berechnet) + berechneter Wert
+  akKartenCents: number;
+  akKartenBerechnetCents: number;
+  akKartenManuell: boolean;
   // Bar unten
   barKartenCents: number; // berechnet: Karten Total − AK-Karten
   barUmsatzCents: number;
@@ -105,7 +113,20 @@ export function berechneAbrechnung(
 ): AbrechnungBerechnet {
   const n = (v: number | null) => v ?? 0;
 
-  const akKarten = n(d.akKartenCents);
+  const summe = (stufen: EintrittsStufe[]) => stufen.reduce((s, e) => s + e.preisCents * e.anzahl, 0);
+  const anzahl = (stufen: EintrittsStufe[]) => stufen.reduce((s, e) => s + e.anzahl, 0);
+  const vvkTotal = summe(d.eintritteVvk);
+  const akEintritteTotal = summe(d.eintritteAk);
+  const eintritteGewinn = vvkTotal + akEintritteTotal;
+
+  const akGewinnKasse = n(d.akEndCents) - n(d.akAnfangCents);
+  // Was an der Abendkasse eingenommen, aber nicht bar in der Kasse liegt, wurde
+  // mit Karte bezahlt. Mehr Bargeld als Eintritte → 0 (Differenz im Quercheck).
+  const akKartenBerechnet = Math.max(0, akEintritteTotal - akGewinnKasse);
+  const akKartenManuell = d.akKartenCents != null;
+  const akKarten = akKartenManuell ? n(d.akKartenCents) : akKartenBerechnet;
+  const akTotal = akGewinnKasse + akKarten;
+
   const kartenTotal = n(d.kartenTotalCents);
   const barKarten = kartenTotal - akKarten;
 
@@ -113,18 +134,9 @@ export function berechneAbrechnung(
   const warenkosten = Math.round((barUmsatz * WARENKOSTEN_PROZENT) / 100);
   const barGewinn = barUmsatz - warenkosten;
 
-  const akGewinnKasse = n(d.akEndCents) - n(d.akAnfangCents);
-  const akTotal = akGewinnKasse + akKarten;
-
   const twint = n(d.twintCents);
   const gebuehr = Math.round(((kartenTotal + twint) * GEBUEHR_PROZENT) / 100);
   const sumupTotal = kartenTotal + twint - gebuehr;
-
-  const summe = (stufen: EintrittsStufe[]) => stufen.reduce((s, e) => s + e.preisCents * e.anzahl, 0);
-  const anzahl = (stufen: EintrittsStufe[]) => stufen.reduce((s, e) => s + e.anzahl, 0);
-  const vvkTotal = summe(d.eintritteVvk);
-  const akEintritteTotal = summe(d.eintritteAk);
-  const eintritteGewinn = vvkTotal + akEintritteTotal;
 
   const mieteTotal = d.miete.reduce((s, m) => s + m.preisCents, 0);
 
@@ -134,6 +146,9 @@ export function berechneAbrechnung(
   const einnahmen = barGewinn + eintritteGewinn + mieteTotal;
 
   return {
+    akKartenCents: akKarten,
+    akKartenBerechnetCents: akKartenBerechnet,
+    akKartenManuell,
     barKartenCents: barKarten,
     barUmsatzCents: barUmsatz,
     warenkostenCents: warenkosten,

@@ -121,9 +121,18 @@ export function Abrechnung({ anlassId }: { anlassId: number }) {
           <ChfInput wert={daten.akEndCents} onSave={(v) => speichern({ akEndCents: v })} />
         </Zeile>
         <Zeile label="Gewinn Kasse" wert={b.akGewinnKasseCents} />
-        <Zeile label="Kartenzahlungen Abendkasse">
+        <Zeile
+          label={b.akKartenManuell ? "Kartenzahlungen Abendkasse (manuell)" : "Kartenzahlungen Abendkasse (berechnet: Eintritte − Gewinn Kasse)"}
+          wert={b.akKartenCents}
+        />
+        <Zeile label="Kartenzahlungen manuell (optional, z. B. laut SumUp-Gerät)">
           <ChfInput wert={daten.akKartenCents} onSave={(v) => speichern({ akKartenCents: v })} />
         </Zeile>
+        {b.akKartenManuell && b.akEintritteTotalCents > 0 && b.akKartenBerechnetCents !== b.akKartenCents && (
+          <p className="text-xs text-dim">
+            Aus Eintritten und Kassenstock berechnet wären es CHF {formatChf(b.akKartenBerechnetCents)}. Feld leeren, um den berechneten Wert zu verwenden.
+          </p>
+        )}
         <Zeile label="Total Einnahmen Abendkasse" wert={b.akTotalCents} fett />
         {b.kassenDifferenzCents !== 0 && (daten.akEndCents != null || b.akEintritteTotalCents > 0) && (
           <p className="mt-1 border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-xs text-accent">
@@ -141,6 +150,11 @@ export function Abrechnung({ anlassId }: { anlassId: number }) {
           <ChfInput wert={daten.barEndCents} onSave={(v) => speichern({ barEndCents: v })} />
         </Zeile>
         <Zeile label="Kartenzahlungen (berechnet: Total − Abendkasse)" wert={b.barKartenCents} />
+        {b.barKartenCents < 0 && (
+          <p className="border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-xs text-accent">
+            Die Kartenzahlungen der Abendkasse sind höher als das Karten-Total von SumUp — bitte Eintritte, Kassenstock und Karten-Total prüfen.
+          </p>
+        )}
         <Zeile label="Umsatz" wert={b.barUmsatzCents} fett />
         <Zeile label={`Warenkosten (${WARENKOSTEN_PROZENT}%)`} wert={b.warenkostenCents} />
         <Zeile label="Gewinn" wert={b.barGewinnCents} fett />

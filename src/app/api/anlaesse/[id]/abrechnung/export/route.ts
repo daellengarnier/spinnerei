@@ -75,7 +75,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   set(z++, 2, "Anfangsstock") && set(z - 1, 4, chf(daten.akAnfangCents));
   set(z++, 2, "Endstock") && set(z - 1, 4, chf(daten.akEndCents));
   set(z++, 2, "Gewinn Kasse") && set(z - 1, 4, chf(b.akGewinnKasseCents));
-  set(z++, 2, "Kartenzahlungen") && set(z - 1, 4, chf(daten.akKartenCents));
+  set(z++, 2, "Kartenzahlungen") && set(z - 1, 4, chf(b.akKartenCents));
   set(z++, 2, "Total Einnahmen Abendkasse", true) && set(z - 1, 4, chf(b.akTotalCents), true);
   z++;
   set(z++, 2, "SUMUP / TWINT", true);
