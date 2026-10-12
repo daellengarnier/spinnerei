@@ -55,16 +55,19 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         .orderBy(asc(acts.showtime), asc(acts.name))
     : [];
 
+  const absaetzeHtml = (text: string) =>
+    text
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p) => `<p>${htmlEscape(p).replace(/\n/g, "<br>")}</p>`)
+      .join("\n");
+
   const actsHtml = anlassActs
     .filter((a) => a.name)
     .map((a) => {
       const meta = [a.genre, a.herkunft].filter(Boolean).join(", ");
-      const absaetze = a.promotext
-        .split(/\n\s*\n/)
-        .map((p) => p.trim())
-        .filter(Boolean)
-        .map((p) => `<p>${htmlEscape(p).replace(/\n/g, "<br>")}</p>`)
-        .join("\n");
+      const absaetze = absaetzeHtml(a.promotext);
       // Heisst der Act wie der Anlass (z. B. Record-Release-Show), den Namen
       // nicht nochmals als Überschrift wiederholen — nur Genre/Herkunft.
       const istTitel = a.name.trim().toLowerCase() === anlass.name.trim().toLowerCase();
@@ -98,10 +101,13 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   const ticketAbsatz = anlass.petzilink
     ? `<p><strong><a href="${htmlEscape(anlass.petzilink)}" target="_blank" rel="noopener">Tickets im Vorverkauf (Petzi)</a></strong></p>`
     : "";
-  // Noch keine Act-Infos erfasst → Platzhalter, damit die Seite nicht leer wirkt.
+  // Einleitung des Anlasses vor den Acts. Weder Einleitung noch Act-Infos →
+  // Platzhalter, damit die Seite nicht leer wirkt.
+  const einleitungHtml = absaetzeHtml(anlass.websitetext);
   const beschreibung = [
     infoZeile && `<p>${htmlEscape(infoZeile)}</p>`,
-    actsHtml || "<p><em>Weitere Infos folgen.</em></p>",
+    einleitungHtml,
+    actsHtml || (einleitungHtml ? "" : "<p><em>Weitere Infos folgen.</em></p>"),
     ticketAbsatz,
   ]
     .filter(Boolean)

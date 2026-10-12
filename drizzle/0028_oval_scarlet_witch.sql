@@ -1,0 +1,1 @@
+ALTER TABLE "anlaesse" ADD COLUMN "websitetext" text DEFAULT '' NOT NULL;

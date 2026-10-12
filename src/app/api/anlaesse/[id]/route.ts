@@ -81,7 +81,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return s === "" || /^\d{2}:\d{2}$/.test(s) ? s : null;
   };
 
-  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; mitEssen: boolean | null; crewFleisch: number | null; crewVegi: number | null; crewVegan: number | null; essenNotiz: string; petzilink: string; art: string; zugang: string; drivelink: string; abendverantwortungUserId: number | null; normaltarifCents: number | null; solitarifCents: number | null }> = {};
+  const patch: Partial<{ name: string; datum: string; tueroeffnung: string; essen: string; ende: string; mitEssen: boolean | null; crewFleisch: number | null; crewVegi: number | null; crewVegan: number | null; essenNotiz: string; petzilink: string; art: string; zugang: string; drivelink: string; websitetext: string; abendverantwortungUserId: number | null; normaltarifCents: number | null; solitarifCents: number | null }> = {};
   if (body?.name !== undefined) {
     const name = String(body.name).trim();
     if (!name) return Response.json({ error: "Name darf nicht leer sein" }, { status: 400 });
@@ -117,6 +117,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (body.mitEssen !== true) patch.essen = "";
   }
   if (body?.art !== undefined) patch.art = String(body.art).trim();
+  if (body?.websitetext !== undefined) patch.websitetext = String(body.websitetext ?? "").trim();
   if (body?.zugang !== undefined) {
     const zugang = String(body.zugang);
     if (!["", "oeffentlich", "privat"].includes(zugang)) return Response.json({ error: "Zugang: oeffentlich oder privat" }, { status: 400 });

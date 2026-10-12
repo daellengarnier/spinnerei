@@ -36,6 +36,7 @@ interface Anlass {
   art: string;
   zugang: string;
   drivelink: string;
+  websitetext: string;
   abendverantwortungUserId: number | null;
   normaltarifCents: number | null;
   solitarifCents: number | null;
@@ -303,6 +304,7 @@ function Uebersicht({
     art: anlass.art,
     zugang: anlass.zugang,
     drivelink: anlass.drivelink,
+    websitetext: anlass.websitetext,
     essenNotiz: anlass.essenNotiz,
   });
   const [error, setError] = useState("");
@@ -653,7 +655,18 @@ function Uebersicht({
           </a>
         )}
       </div>
-      {werte.zugang === "oeffentlich" && <WebsitePublish anlass={anlass} />}
+      {werte.zugang === "oeffentlich" && (
+        <>
+          <label className="label mt-2 text-xs">Websitetext (Einleitung vor den Acts)</label>
+          <textarea
+            className="input min-h-24 px-2 py-1.5 text-sm"
+            placeholder="Worum geht's an diesem Abend? Absätze mit Leerzeile."
+            defaultValue={werte.websitetext}
+            onBlur={(e) => e.target.value.trim() !== werte.websitetext && save("websitetext", e.target.value.trim())}
+          />
+          <WebsitePublish anlass={anlass} />
+        </>
+      )}
       <button className="btn-primary mt-3 w-full" onClick={() => setOffen(false)}>
         Fertig
       </button>

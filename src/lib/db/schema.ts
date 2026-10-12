@@ -52,6 +52,8 @@ export const anlaesse = pgTable("anlaesse", {
   zugang: text("zugang").notNull().default(""),
   // Link zum Google-Drive-Ordner des Anlasses.
   drivelink: text("drivelink").notNull().default(""),
+  // Einleitung für die Website (vor den Promotexten der Acts), Absätze mit Leerzeile.
+  websitetext: text("websitetext").notNull().default(""),
   // Abendverantwortung (AV) des Anlasses.
   abendverantwortungUserId: integer("abendverantwortungUserId"),
   // Ticketpreise in Rappen (null = noch nicht festgelegt).
