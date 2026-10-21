@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db/client";
 import { anlaesse, ressorts, todos } from "@/lib/db/schema";
 import { allUsers, notifyMany } from "@/lib/notify";
 import { formatDatumKurz } from "@/lib/datum";
+import { STANDARD_RESSORTS } from "@/lib/standardRessorts";
 
 // Alle Anlässe, chronologisch, mit Anzahl offener Todos.
 export async function GET() {
@@ -25,7 +26,7 @@ export async function GET() {
   return Response.json({ anlaesse: result });
 }
 
-// Admin: neuen Anlass anlegen.
+// Admin: neuen Anlass anlegen, mit den Standard-Ressorts.
 export async function POST(request: Request) {
   const auth = await requireAdmin();
   if (isResponse(auth)) return auth;
@@ -55,6 +56,16 @@ export async function POST(request: Request) {
     slug = `${slugBase}-${i}`;
   }
   const inserted = await db.insert(anlaesse).values({ slug, name, datum }).returning({ id: anlaesse.id });
+  await db.insert(ressorts).values(
+    STANDARD_RESSORTS.map((r, i) => ({
+      anlassId: inserted[0].id,
+      name: r.name,
+      farbe: r.farbe,
+      reihenfolge: i + 1,
+      hatActs: "hatActs" in r && r.hatActs,
+      hatFinanzen: "hatFinanzen" in r && r.hatFinanzen,
+    })),
+  );
 
   // Alle Mitglieder benachrichtigen (Inbox + Push).
   const alle = await allUsers();

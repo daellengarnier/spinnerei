@@ -204,6 +204,13 @@
       "when": 1791836722064,
       "tag": "0028_oval_scarlet_witch",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792598790389,
+      "tag": "0029_standard-ressorts",
+      "breakpoints": true
     }
   ]
 }
