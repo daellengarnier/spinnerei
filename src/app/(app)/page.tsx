@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/apiClient";
 import { EmptyState, Modal, Spinner } from "@/components/Ui";
@@ -33,6 +33,21 @@ function datumTeile(datum: string) {
   const [j, m, t] = datum.split("-").map(Number);
   const wochentag = WOCHENTAGE_KURZ[new Date(j ?? 2026, (m ?? 1) - 1, t ?? 1).getDay()] ?? "";
   return { tag: String(t).padStart(2, "0"), monat: MONATE_KURZ[(m ?? 1) - 1] ?? "", wochentag };
+}
+
+// Jahreswechsel zwischen zwei Anlässen der Liste (Trenner «2027»).
+function neuesJahr(vorher: string, datum: string) {
+  return vorher.slice(0, 4) !== datum.slice(0, 4);
+}
+
+function JahrTrenner({ jahr }: { jahr: string }) {
+  return (
+    <div className="flex items-center gap-3 px-1 pt-2">
+      <div className="h-px flex-1 bg-line2" />
+      <span className="text-xs text-mute">{jahr}</span>
+      <div className="h-px flex-1 bg-line2" />
+    </div>
+  );
 }
 
 function istVorbei(datum: string) {
@@ -97,8 +112,11 @@ export default function AnlaesseUebersicht() {
           <EmptyState title="Keine kommenden Anlässe" hint={user?.rolle === "admin" ? "Lege oben einen Anlass an." : "Der Admin legt Anlässe an."} />
         ) : (
           <div className="space-y-2.5">
-            {kommende.map((a) => (
-              <AnlassKarte key={a.id} anlass={a} detail={details.get(a.id)} />
+            {kommende.map((a, i) => (
+              <Fragment key={a.id}>
+                {i > 0 && neuesJahr(kommende[i - 1].datum, a.datum) && <JahrTrenner jahr={a.datum.slice(0, 4)} />}
+                <AnlassKarte anlass={a} detail={details.get(a.id)} />
+              </Fragment>
             ))}
           </div>
         )}
@@ -114,8 +132,11 @@ export default function AnlaesseUebersicht() {
           </button>
           {archivOffen && (
             <div className="space-y-2.5 opacity-70">
-              {vergangene.map((a) => (
-                <AnlassKarte key={a.id} anlass={a} detail={details.get(a.id)} />
+              {vergangene.map((a, i) => (
+                <Fragment key={a.id}>
+                  {i > 0 && neuesJahr(vergangene[i - 1].datum, a.datum) && <JahrTrenner jahr={a.datum.slice(0, 4)} />}
+                  <AnlassKarte anlass={a} detail={details.get(a.id)} />
+                </Fragment>
               ))}
             </div>
           )}
