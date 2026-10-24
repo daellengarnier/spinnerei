@@ -20,6 +20,7 @@ import {
   type GagenPosten,
   type MietPosten,
 } from "@/lib/abrechnung";
+import { erklaereAbrechnung, type ErklaerungKey, type Rechnung } from "@/lib/abrechnungErklaerung";
 
 interface GagenAct {
   funktion: string;
@@ -73,29 +74,23 @@ export function Abrechnung({ anlassId }: { anlassId: number }) {
     sonstige.reduce((s, a) => s + a.preisCents, 0),
   );
   const gewinn = b.gewinnVerlustCents >= 0;
+  // Aufschlüsselung der berechneten Zahlen (nur Anzeige, ändert nichts).
+  const e = erklaereAbrechnung(daten, b, gagenActs, sonstige);
 
   return (
     <div className="space-y-4">
       {/* Zusammenzug */}
       <div className="card p-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <p className="lbl">Gewinn / Verlust</p>
-            <p className={`text-2xl font-extrabold ${gewinn ? "text-[#6fcf7a]" : "text-[#e05c5c]"}`}>CHF {formatChf(b.gewinnVerlustCents)}</p>
-          </div>
-          <div>
-            <p className="lbl">Umsatz für Buchhaltung</p>
-            <p className="text-2xl font-extrabold text-ink">CHF {formatChf(b.umsatzBuchhaltungCents)}</p>
-          </div>
-          <div>
-            <p className="lbl">Einnahmen</p>
-            <p className="font-bold text-ink">CHF {formatChf(b.einnahmenCents)}</p>
-          </div>
-          <div>
-            <p className="lbl">Ausgaben</p>
-            <p className="font-bold text-ink">CHF {formatChf(b.ausgabenTotalCents)}</p>
-          </div>
-        </div>
+        <Zusammenzug
+          kennzahlen={[
+            { key: "gewinnVerlust", label: "Gewinn / Verlust", cents: b.gewinnVerlustCents, gross: true, farbe: gewinn ? "text-[#6fcf7a]" : "text-[#e05c5c]" },
+            { key: "umsatzBuchhaltung", label: "Umsatz für Buchhaltung", cents: b.umsatzBuchhaltungCents, gross: true },
+            { key: "einnahmen", label: "Einnahmen", cents: b.einnahmenCents },
+            { key: "ausgaben", label: "Ausgaben", cents: b.ausgabenTotalCents },
+          ]}
+          erklaerung={e}
+        />
+        <p className="mt-2 text-xs text-dim">Tipp: Auf eine berechnete Zahl tippen, um zu sehen, wie sie zusammengesetzt ist.</p>
         <a href={`/api/anlaesse/${anlassId}/abrechnung/export`} className="btn-ghost mt-3 w-full">
           <Icon name="file" size={15} /> Excel-Export für die Buchhaltung
         </a>
@@ -109,8 +104,8 @@ export function Abrechnung({ anlassId }: { anlassId: number }) {
         <Zeile label="Twint">
           <ChfInput wert={daten.twintCents} onSave={(v) => speichern({ twintCents: v })} />
         </Zeile>
-        <Zeile label={`Gebühr (${GEBUEHR_PROZENT}%)`} wert={b.gebuehrCents} />
-        <Zeile label="Total" wert={b.sumupTotalCents} fett />
+        <Zeile label={`Gebühr (${GEBUEHR_PROZENT}%)`} wert={b.gebuehrCents} rechnung={e.gebuehr} />
+        <Zeile label="Total" wert={b.sumupTotalCents} fett rechnung={e.sumupTotal} />
       </Block>
 
       <Block titel="Abendkasse (Eingang)">
@@ -120,10 +115,11 @@ export function Abrechnung({ anlassId }: { anlassId: number }) {
         <Zeile label="Endstock">
           <ChfInput wert={daten.akEndCents} onSave={(v) => speichern({ akEndCents: v })} />
         </Zeile>
-        <Zeile label="Gewinn Kasse" wert={b.akGewinnKasseCents} />
+        <Zeile label="Gewinn Kasse" wert={b.akGewinnKasseCents} rechnung={e.akGewinnKasse} />
         <Zeile
           label={b.akKartenManuell ? "Kartenzahlungen Abendkasse (manuell)" : "Kartenzahlungen Abendkasse (berechnet: Eintritte − Gewinn Kasse)"}
           wert={b.akKartenCents}
+          rechnung={e.akKarten}
         />
         <Zeile label="Kartenzahlungen manuell (optional, z. B. laut SumUp-Gerät)">
           <ChfInput wert={daten.akKartenCents} onSave={(v) => speichern({ akKartenCents: v })} />
@@ -133,7 +129,7 @@ export function Abrechnung({ anlassId }: { anlassId: number }) {
             Aus Eintritten und Kassenstock berechnet wären es CHF {formatChf(b.akKartenBerechnetCents)}. Feld leeren, um den berechneten Wert zu verwenden.
           </p>
         )}
-        <Zeile label="Total Einnahmen Abendkasse" wert={b.akTotalCents} fett />
+        <Zeile label="Total Einnahmen Abendkasse" wert={b.akTotalCents} fett rechnung={e.akTotal} />
         {b.kassenDifferenzCents !== 0 && (daten.akEndCents != null || b.akEintritteTotalCents > 0) && (
           <p className="mt-1 border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-xs text-accent">
             Quercheck: Abendkasse ({formatChf(b.akTotalCents)}) und gezählte Eintritte Abendkasse ({formatChf(b.akEintritteTotalCents)}) weichen um CHF{" "}
@@ -149,15 +145,15 @@ export function Abrechnung({ anlassId }: { anlassId: number }) {
         <Zeile label="Endstock">
           <ChfInput wert={daten.barEndCents} onSave={(v) => speichern({ barEndCents: v })} />
         </Zeile>
-        <Zeile label="Kartenzahlungen (berechnet: Total − Abendkasse)" wert={b.barKartenCents} />
+        <Zeile label="Kartenzahlungen (berechnet: Total − Abendkasse)" wert={b.barKartenCents} rechnung={e.barKarten} />
         {b.barKartenCents < 0 && (
           <p className="border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-xs text-accent">
             Die Kartenzahlungen der Abendkasse sind höher als das Karten-Total von SumUp — bitte Eintritte, Kassenstock und Karten-Total prüfen.
           </p>
         )}
-        <Zeile label="Umsatz" wert={b.barUmsatzCents} fett />
-        <Zeile label={`Warenkosten (${WARENKOSTEN_PROZENT}%)`} wert={b.warenkostenCents} />
-        <Zeile label="Gewinn" wert={b.barGewinnCents} fett />
+        <Zeile label="Umsatz" wert={b.barUmsatzCents} fett rechnung={e.barUmsatz} />
+        <Zeile label={`Warenkosten (${WARENKOSTEN_PROZENT}%)`} wert={b.warenkostenCents} rechnung={e.warenkosten} />
+        <Zeile label="Gewinn" wert={b.barGewinnCents} fett rechnung={e.barGewinn} />
       </Block>
 
       <StufenBlock
@@ -165,6 +161,7 @@ export function Abrechnung({ anlassId }: { anlassId: number }) {
         stufen={daten.eintritteVvk}
         totalCents={b.vvkTotalCents}
         totalAnzahl={b.vvkAnzahl}
+        rechnung={e.vvkTotal}
         onSave={(s) => speichern({ eintritteVvk: s })}
       />
       <StufenBlock
@@ -172,6 +169,7 @@ export function Abrechnung({ anlassId }: { anlassId: number }) {
         stufen={daten.eintritteAk}
         totalCents={b.akEintritteTotalCents}
         totalAnzahl={b.akEintritteAnzahl}
+        rechnung={e.akEintritteTotal}
         onSave={(s) => speichern({ eintritteAk: s })}
       />
       <div className="card px-4 py-2.5">
@@ -179,15 +177,12 @@ export function Abrechnung({ anlassId }: { anlassId: number }) {
           <span className="text-dim">Total Eintritte (Petzi + Abendkasse)</span>
           <span className="font-bold text-ink">{b.eintritteAnzahl}</span>
         </div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-dim">Total Gewinn Eintritte</span>
-          <span className="font-bold text-ink">CHF {formatChf(b.eintritteGewinnCents)}</span>
-        </div>
+        <Zeile label="Total Gewinn Eintritte (CHF)" wert={b.eintritteGewinnCents} fett rechnung={e.eintritteGewinn} />
       </div>
 
-      <MieteBlock miete={daten.miete} totalCents={b.mieteTotalCents} onSave={(m) => speichern({ miete: m })} />
+      <MieteBlock miete={daten.miete} totalCents={b.mieteTotalCents} rechnung={e.mieteTotal} onSave={(m) => speichern({ miete: m })} />
 
-      <GagenBlock gagenActs={gagenActs} manuell={daten.gagenManuell} totalCents={b.gagenTotalCents} onSave={(g) => speichern({ gagenManuell: g })} />
+      <GagenBlock gagenActs={gagenActs} manuell={daten.gagenManuell} totalCents={b.gagenTotalCents} rechnung={e.gagenTotal} onSave={(g) => speichern({ gagenManuell: g })} />
 
       <Block titel="Sonstige Ausgaben (Materiell)">
         {sonstige.length === 0 ? (
@@ -203,7 +198,7 @@ export function Abrechnung({ anlassId }: { anlassId: number }) {
                 <span className="tabular-nums text-ink">{formatChf(s.preisCents)}</span>
               </div>
             ))}
-            <Zeile label="Total" wert={b.sonstigeTotalCents} fett />
+            <Zeile label="Total" wert={b.sonstigeTotalCents} fett rechnung={e.sonstigeTotal} />
           </>
         )}
       </Block>
@@ -221,12 +216,118 @@ function Block({ titel, children }: { titel: string; children: React.ReactNode }
   );
 }
 
-function Zeile({ label, wert, fett, children }: { label: string; wert?: number; fett?: boolean; children?: React.ReactNode }) {
+function Zeile({
+  label,
+  wert,
+  fett,
+  rechnung,
+  children,
+}: {
+  label: string;
+  wert?: number;
+  fett?: boolean;
+  rechnung?: Rechnung;
+  children?: React.ReactNode;
+}) {
+  const [offen, setOffen] = useState(false);
+  const zahl = <span className={`tabular-nums ${fett ? "font-bold text-ink" : "text-ink"}`}>{wert != null ? formatChf(wert) : ""}</span>;
   return (
-    <div className="flex items-center justify-between gap-3 text-sm">
-      <span className={fett ? "font-bold text-ink" : "text-dim"}>{label}</span>
-      {children ?? <span className={`tabular-nums ${fett ? "font-bold text-ink" : "text-ink"}`}>{wert != null ? formatChf(wert) : ""}</span>}
+    <div>
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span className={fett ? "font-bold text-ink" : "text-dim"}>{label}</span>
+        {children ??
+          (rechnung && wert != null ? (
+            <button
+              onClick={() => setOffen(!offen)}
+              aria-expanded={offen}
+              aria-label={`${label}: Berechnung ${offen ? "ausblenden" : "anzeigen"}`}
+              className="-my-1 border-b border-dashed border-line2 py-1 hover:border-accent"
+            >
+              {zahl}
+            </button>
+          ) : (
+            zahl
+          ))}
+      </div>
+      {offen && rechnung && <RechnungBox rechnung={rechnung} />}
     </div>
+  );
+}
+
+// Aufschlüsselung einer berechneten Zahl: Posten mit + / − / %, dann = Ergebnis.
+function RechnungBox({ rechnung }: { rechnung: Rechnung }) {
+  const zeilen = rechnung.zeilen;
+  const prozentIdx = zeilen.findIndex((z) => z.op === "%");
+  // Vor einer Prozent-Zeile mit mehreren Posten: Zwischensumme als Basis zeigen.
+  const basis =
+    prozentIdx > 1
+      ? zeilen.slice(0, prozentIdx).reduce((s, z) => (z.op === "+" ? s + z.cents : z.op === "−" ? s - z.cents : s), 0)
+      : null;
+  return (
+    <div className="mb-1 mt-1.5 border border-line bg-surface2 px-2.5 py-2 text-xs">
+      {zeilen.length === 0 ? (
+        <p className="text-dim">Noch keine Posten erfasst.</p>
+      ) : (
+        zeilen.map((z, i) => (
+          <div key={i}>
+            {i === prozentIdx && basis !== null && (
+              <div className="flex justify-between gap-3 border-t border-line pt-0.5 text-dim">
+                <span>= Basis</span>
+                <span className="tabular-nums">{formatChf(basis)}</span>
+              </div>
+            )}
+            <div className="flex justify-between gap-3">
+              <span className="text-dim">
+                <span className="inline-block w-4 font-semibold text-ink">{z.op === "%" ? "×" : i === 0 && z.op === "+" ? "" : z.op}</span>
+                {z.op === "%" ? `${z.prozent} % (${z.label})` : z.label}
+              </span>
+              {z.op !== "%" && <span className="tabular-nums text-ink">{formatChf(z.cents)}</span>}
+            </div>
+          </div>
+        ))
+      )}
+      <div className="mt-1 flex justify-between gap-3 border-t border-line2 pt-1 font-bold text-ink">
+        <span>
+          <span className="inline-block w-4">=</span>Ergebnis
+        </span>
+        <span className="tabular-nums">{formatChf(rechnung.ergebnisCents)}</span>
+      </div>
+      {rechnung.hinweis && <p className="mt-1 text-dim">{rechnung.hinweis}</p>}
+    </div>
+  );
+}
+
+// Kennzahlen oben: antippen zeigt die Berechnung in voller Breite darunter.
+function Zusammenzug({
+  kennzahlen,
+  erklaerung,
+}: {
+  kennzahlen: { key: ErklaerungKey; label: string; cents: number; gross?: boolean; farbe?: string }[];
+  erklaerung: Record<ErklaerungKey, Rechnung>;
+}) {
+  const [offen, setOffen] = useState<ErklaerungKey | null>(null);
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        {kennzahlen.map((k) => (
+          <button
+            key={k.key}
+            onClick={() => setOffen(offen === k.key ? null : k.key)}
+            aria-expanded={offen === k.key}
+            className={`border-b border-dashed text-left ${offen === k.key ? "border-accent" : "border-transparent"}`}
+          >
+            <p className="lbl">{k.label}</p>
+            <p className={`${k.gross ? "text-2xl font-extrabold" : "font-bold"} ${k.farbe ?? "text-ink"}`}>CHF {formatChf(k.cents)}</p>
+          </button>
+        ))}
+      </div>
+      {offen && (
+        <div>
+          <p className="mt-2 text-xs font-semibold text-ink">{kennzahlen.find((k) => k.key === offen)?.label}</p>
+          <RechnungBox rechnung={erklaerung[offen]} />
+        </div>
+      )}
+    </>
   );
 }
 
@@ -252,12 +353,14 @@ function StufenBlock({
   titel,
   stufen,
   totalCents,
+  rechnung,
   totalAnzahl,
   onSave,
 }: {
   titel: string;
   stufen: EintrittsStufe[];
   totalCents: number;
+  rechnung?: Rechnung;
   totalAnzahl: number;
   onSave: (s: EintrittsStufe[]) => void;
 }) {
@@ -278,7 +381,7 @@ function StufenBlock({
           + Preisstufe
         </button>
       </div>
-      <Zeile label={`Total (${totalAnzahl} Eintritte)`} wert={totalCents} fett />
+      <Zeile label={`Total (${totalAnzahl} Eintritte)`} wert={totalCents} fett rechnung={rechnung} />
     </Block>
   );
 }
@@ -312,7 +415,17 @@ function StufenZeile({ stufe, onUpdate, onRemove }: { stufe: EintrittsStufe; onU
   );
 }
 
-function MieteBlock({ miete, totalCents, onSave }: { miete: MietPosten[]; totalCents: number; onSave: (m: MietPosten[]) => void }) {
+function MieteBlock({
+  miete,
+  totalCents,
+  rechnung,
+  onSave,
+}: {
+  miete: MietPosten[];
+  totalCents: number;
+  rechnung?: Rechnung;
+  onSave: (m: MietPosten[]) => void;
+}) {
   return (
     <Block titel="Mieteinnahmen (Raum, Material, etc.)">
       {miete.map((m, i) => (
@@ -332,7 +445,7 @@ function MieteBlock({ miete, totalCents, onSave }: { miete: MietPosten[]; totalC
       <button className="btn-ghost w-full py-1 text-xs" onClick={() => onSave([...miete, { art: "", preisCents: 0 }])}>
         + Mietposten
       </button>
-      {miete.length > 0 && <Zeile label="Total" wert={totalCents} fett />}
+      {miete.length > 0 && <Zeile label="Total" wert={totalCents} fett rechnung={rechnung} />}
     </Block>
   );
 }
@@ -341,11 +454,13 @@ function GagenBlock({
   gagenActs,
   manuell,
   totalCents,
+  rechnung,
   onSave,
 }: {
   gagenActs: GagenAct[];
   manuell: GagenPosten[];
   totalCents: number;
+  rechnung?: Rechnung;
   onSave: (g: GagenPosten[]) => void;
 }) {
   return (
@@ -382,7 +497,7 @@ function GagenBlock({
       <button className="btn-ghost w-full py-1 text-xs" onClick={() => onSave([...manuell, { funktion: "", name: "", preisCents: 0 }])}>
         + Gage (z. B. Mischen)
       </button>
-      <Zeile label="Total Gagen" wert={totalCents} fett />
+      <Zeile label="Total Gagen" wert={totalCents} fett rechnung={rechnung} />
     </Block>
   );
 }
