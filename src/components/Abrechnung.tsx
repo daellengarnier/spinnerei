@@ -5,7 +5,8 @@
 // (Kartenzahlung Total − Abendkasse-Karten) berechnet, Warenkosten 40 %,
 // SumUp-Gebühr 2 %, Quercheck Abendkasse vs. gezählte Eintritte.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { api } from "@/lib/apiClient";
 import { Spinner } from "./Ui";
 import { Icon } from "./Icon";
@@ -229,28 +230,125 @@ function Zeile({
   rechnung?: Rechnung;
   children?: React.ReactNode;
 }) {
-  const [offen, setOffen] = useState(false);
   const zahl = <span className={`tabular-nums ${fett ? "font-bold text-ink" : "text-ink"}`}>{wert != null ? formatChf(wert) : ""}</span>;
   return (
-    <div>
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <span className={fett ? "font-bold text-ink" : "text-dim"}>{label}</span>
-        {children ??
-          (rechnung && wert != null ? (
-            <button
-              onClick={() => setOffen(!offen)}
-              aria-expanded={offen}
-              aria-label={`${label}: Berechnung ${offen ? "ausblenden" : "anzeigen"}`}
-              className="-my-1 border-b border-dashed border-line2 py-1 hover:border-accent"
-            >
-              {zahl}
-            </button>
-          ) : (
-            zahl
-          ))}
-      </div>
-      {offen && rechnung && <RechnungBox rechnung={rechnung} />}
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <span className={fett ? "font-bold text-ink" : "text-dim"}>{label}</span>
+      {children ??
+        (rechnung && wert != null ? (
+          <RechnungTooltip titel={label} rechnung={rechnung} className="-my-1 border-b border-dashed border-line2 py-1 hover:border-accent">
+            {zahl}
+          </RechnungTooltip>
+        ) : (
+          zahl
+        ))}
     </div>
+  );
+}
+
+// Tooltip mit der Aufschlüsselung: Antippen (Handy) bzw. Hover (Maus) an der
+// Zahl. Schwebt über dem Inhalt (fixe Position, bleibt im Bildschirm);
+// schliesst bei Tippen daneben, Scrollen oder Escape.
+function RechnungTooltip({
+  titel,
+  rechnung,
+  className,
+  children,
+}: {
+  titel: string;
+  rechnung: Rechnung;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const [offen, setOffen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number; oben: boolean; pfeil: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const tipRef = useRef<HTMLDivElement>(null);
+  const perHover = useRef(false);
+
+  const schliessen = useCallback(() => {
+    setOffen(false);
+    setPos(null);
+  }, []);
+
+  // Position: unter der Zahl, rechtsbündig; zu wenig Platz unten → oben.
+  useLayoutEffect(() => {
+    if (!offen) return;
+    const t = triggerRef.current?.getBoundingClientRect();
+    const tip = tipRef.current?.getBoundingClientRect();
+    if (!t || !tip) return;
+    const rand = 8;
+    const left = Math.min(Math.max(rand, t.right - tip.width), window.innerWidth - tip.width - rand);
+    const oben = t.bottom + 8 + tip.height > window.innerHeight - rand && t.top - 8 - tip.height > rand;
+    const top = oben ? t.top - 8 - tip.height : t.bottom + 8;
+    const pfeil = Math.min(Math.max(12, t.left + t.width / 2 - left), tip.width - 12);
+    setPos((p) => (p && p.top === top && p.left === left && p.oben === oben ? p : { top, left, oben, pfeil }));
+  }, [offen, rechnung]);
+
+  useEffect(() => {
+    if (!offen) return;
+    const weg = (e: Event) => {
+      const z = e.target as Node;
+      if (triggerRef.current?.contains(z) || tipRef.current?.contains(z)) return;
+      schliessen();
+    };
+    const taste = (e: KeyboardEvent) => e.key === "Escape" && schliessen();
+    document.addEventListener("pointerdown", weg);
+    window.addEventListener("scroll", schliessen, true);
+    window.addEventListener("resize", schliessen);
+    document.addEventListener("keydown", taste);
+    return () => {
+      document.removeEventListener("pointerdown", weg);
+      window.removeEventListener("scroll", schliessen, true);
+      window.removeEventListener("resize", schliessen);
+      document.removeEventListener("keydown", taste);
+    };
+  }, [offen, schliessen]);
+
+  const kannHover = () => typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches;
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => {
+          perHover.current = false;
+          if (offen) schliessen();
+          else setOffen(true);
+        }}
+        onMouseEnter={() => {
+          if (!offen && kannHover()) {
+            perHover.current = true;
+            setOffen(true);
+          }
+        }}
+        onMouseLeave={() => perHover.current && schliessen()}
+        aria-expanded={offen}
+        aria-label={`${titel}: Berechnung ${offen ? "ausblenden" : "anzeigen"}`}
+        className={className}
+      >
+        {children}
+      </button>
+      {offen &&
+        createPortal(
+          <div
+            ref={tipRef}
+            role="tooltip"
+            className="fixed z-50 w-max min-w-[200px] max-w-[min(300px,calc(100vw-16px))] border border-line2 bg-surface text-left shadow-[0_8px_24px_rgba(0,0,0,0.55)]"
+            style={{ top: pos?.top ?? 0, left: pos?.left ?? 0, visibility: pos ? "visible" : "hidden" }}
+          >
+            <span
+              aria-hidden="true"
+              className={`absolute h-2.5 w-2.5 rotate-45 border-line2 bg-surface ${pos?.oben ? "-bottom-[6px] border-b border-r" : "-top-[6px] border-l border-t"}`}
+              style={{ left: (pos?.pfeil ?? 12) - 5 }}
+            />
+            <p className="px-2.5 pt-2 text-[11px] font-semibold uppercase tracking-wide text-accent">{titel}</p>
+            <RechnungBox rechnung={rechnung} />
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
 
@@ -264,7 +362,7 @@ function RechnungBox({ rechnung }: { rechnung: Rechnung }) {
       ? zeilen.slice(0, prozentIdx).reduce((s, z) => (z.op === "+" ? s + z.cents : z.op === "−" ? s - z.cents : s), 0)
       : null;
   return (
-    <div className="mb-1 mt-1.5 border border-line bg-surface2 px-2.5 py-2 text-xs">
+    <div className="px-2.5 pb-2 pt-1 text-xs">
       {zeilen.length === 0 ? (
         <p className="text-dim">Noch keine Posten erfasst.</p>
       ) : (
@@ -297,7 +395,7 @@ function RechnungBox({ rechnung }: { rechnung: Rechnung }) {
   );
 }
 
-// Kennzahlen oben: antippen zeigt die Berechnung in voller Breite darunter.
+// Kennzahlen oben: antippen bzw. Hover zeigt die Berechnung als Tooltip.
 function Zusammenzug({
   kennzahlen,
   erklaerung,
@@ -305,29 +403,17 @@ function Zusammenzug({
   kennzahlen: { key: ErklaerungKey; label: string; cents: number; gross?: boolean; farbe?: string }[];
   erklaerung: Record<ErklaerungKey, Rechnung>;
 }) {
-  const [offen, setOffen] = useState<ErklaerungKey | null>(null);
   return (
-    <>
-      <div className="grid grid-cols-2 gap-3">
-        {kennzahlen.map((k) => (
-          <button
-            key={k.key}
-            onClick={() => setOffen(offen === k.key ? null : k.key)}
-            aria-expanded={offen === k.key}
-            className={`border-b border-dashed text-left ${offen === k.key ? "border-accent" : "border-transparent"}`}
-          >
-            <p className="lbl">{k.label}</p>
-            <p className={`${k.gross ? "text-2xl font-extrabold" : "font-bold"} ${k.farbe ?? "text-ink"}`}>CHF {formatChf(k.cents)}</p>
-          </button>
-        ))}
-      </div>
-      {offen && (
-        <div>
-          <p className="mt-2 text-xs font-semibold text-ink">{kennzahlen.find((k) => k.key === offen)?.label}</p>
-          <RechnungBox rechnung={erklaerung[offen]} />
+    <div className="grid grid-cols-2 gap-3">
+      {kennzahlen.map((k) => (
+        <div key={k.key}>
+          <p className="lbl">{k.label}</p>
+          <RechnungTooltip titel={k.label} rechnung={erklaerung[k.key]} className="border-b border-dashed border-line2 text-left hover:border-accent">
+            <span className={`${k.gross ? "text-2xl font-extrabold" : "font-bold"} ${k.farbe ?? "text-ink"}`}>CHF {formatChf(k.cents)}</span>
+          </RechnungTooltip>
         </div>
-      )}
-    </>
+      ))}
+    </div>
   );
 }
 
