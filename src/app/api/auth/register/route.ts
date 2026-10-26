@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
   // Vorbelegtes Profil (Platzhalter) mit exakt diesem Namen übernehmen?
   const placeholder = await db
-    .select({ id: users.id })
+    .select({ id: users.id, rolle: users.rolle })
     .from(users)
     .where(and(eq(users.name, name), eq(users.claimed, false)))
     .limit(1);
@@ -52,13 +52,15 @@ export async function POST(request: Request) {
       .where(and(eq(users.email, email), ne(users.id, placeholder[0].id)))
       .limit(1);
     if (emailTaken[0]) return jsonError("Diese E-Mail ist bereits registriert", 409);
+    // Als Admin vorbereitete Profile (z. B. Jarvis) bleiben Admin.
+    const wirdAdmin = isAdmin || placeholder[0].rolle === "admin";
     await db
       .update(users)
-      .set({ email, passwordHash: hashPassword(password), claimed: true, active: true, mustChangePassword: false, rolle: isAdmin ? "admin" : "mitglied" })
+      .set({ email, passwordHash: hashPassword(password), claimed: true, active: true, mustChangePassword: false, rolle: wirdAdmin ? "admin" : "mitglied" })
       .where(eq(users.id, placeholder[0].id));
     const token = await createSession(placeholder[0].id);
     await setSessionCookie(token);
-    return Response.json({ ok: true, admin: isAdmin, claimed: true }, { status: 201 });
+    return Response.json({ ok: true, admin: wirdAdmin, claimed: true }, { status: 201 });
   }
 
   // Sonst: neues Konto anlegen.
