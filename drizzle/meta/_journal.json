@@ -211,6 +211,13 @@
       "when": 1792598790389,
       "tag": "0029_standard-ressorts",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793106136951,
+      "tag": "0030_tense_madame_masque",
+      "breakpoints": true
     }
   ]
 }

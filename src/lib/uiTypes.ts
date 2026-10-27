@@ -13,6 +13,7 @@ export interface User {
   avatarColor: string;
   avatarAttachmentId: number | null;
   mustChangePassword: boolean;
+  googleVerknuepft?: boolean;
 }
 
 export interface UserLite {

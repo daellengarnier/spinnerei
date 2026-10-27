@@ -27,6 +27,24 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [pushMsg, setPushMsg] = useState("");
   const [pushBusy, setPushBusy] = useState(false);
+  const [googleMeldung, setGoogleMeldung] = useState("");
+
+  // Rückmeldung nach «Mit Google verknüpfen» (?google=…), danach Parameter entfernen.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("google");
+    if (!code) return;
+    setGoogleMeldung(
+      {
+        verknuepft: "Dein Konto ist jetzt mit Google verknüpft — ab sofort geht «Mit Google anmelden».",
+        schon_vergeben: "Dieses Google-Konto ist schon mit einem anderen Profil verknüpft.",
+        domain: "Nur @kulturspinnerei.ch-Konten können verknüpft werden.",
+      }[code] ?? "Das Verknüpfen mit Google hat nicht geklappt. Bitte nochmals versuchen.",
+    );
+    params.delete("google");
+    const rest = params.toString();
+    window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
+  }, []);
   const menuRef = useRef<HTMLDivElement>(null);
   const avatarFileRef = useRef<HTMLInputElement>(null);
 
@@ -163,6 +181,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                     <Icon name="gear" size={17} className="text-dim" /> Administration
                   </button>
                 )}
+                {user.googleVerknuepft ? (
+                  <p className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-dim">
+                    <Icon name="check" size={17} className="text-accent" /> Mit Google verknüpft
+                  </p>
+                ) : (
+                  <a href="/api/auth/google?modus=verknuepfen" className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm hover:bg-surface2">
+                    <Icon name="user" size={17} className="text-dim" /> Mit Google verknüpfen
+                  </a>
+                )}
                 <button onClick={() => { setMenuOpen(false); router.push("/passwort"); }} className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm hover:bg-surface2">
                   <Icon name="key" size={17} className="text-dim" /> Passwort ändern
                 </button>
@@ -177,6 +204,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </header>
 
       <main className="flex-1 px-4 py-4 pb-24">
+        {googleMeldung && (
+          <button
+            onClick={() => setGoogleMeldung("")}
+            className="mb-3 block w-full border border-accent/40 bg-accent/10 px-3 py-2 text-left text-sm text-accent"
+          >
+            {googleMeldung} <span className="text-dim">(schliessen)</span>
+          </button>
+        )}
         <PushPrompt />
         {children}
       </main>

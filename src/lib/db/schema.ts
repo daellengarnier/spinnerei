@@ -82,6 +82,8 @@ export const users = pgTable("users", {
   active: boolean("active").notNull().default(true),
   // false = vorbelegtes Profil (Platzhalter), das noch niemand übernommen hat.
   claimed: boolean("claimed").notNull().default(true),
+  // Google-Konto (OpenID «sub») für «Mit Google anmelden»; null = nicht verknüpft.
+  googleSub: text("googleSub").unique(),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
 });
 

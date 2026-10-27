@@ -1,9 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthContext";
+
+const GOOGLE_MELDUNG: Record<string, string> = {
+  domain: "Bitte mit deinem @kulturspinnerei.ch-Konto anmelden — andere Google-Konten sind nicht zugelassen.",
+  abgebrochen: "Google-Anmeldung abgebrochen.",
+  inaktiv: "Dieses Konto ist deaktiviert. Bitte bei einem Admin melden.",
+  schon_vergeben: "Dieses Konto ist schon mit einem anderen Google-Konto verknüpft. Bitte bei einem Admin melden.",
+  nicht_eingerichtet: "Die Google-Anmeldung ist noch nicht eingerichtet. Bitte mit E-Mail und Passwort anmelden.",
+  fehler: "Die Google-Anmeldung hat nicht geklappt. Bitte nochmals versuchen.",
+};
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -12,6 +21,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleMeldung, setGoogleMeldung] = useState("");
+
+  // Rückmeldung nach «Mit Google anmelden» (?google=…).
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("google");
+    if (code) setGoogleMeldung(GOOGLE_MELDUNG[code] ?? GOOGLE_MELDUNG.fehler);
+  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +67,7 @@ export default function LoginPage() {
             Mit Google anmelden
           </a>
           <p className="-mt-1 text-center text-xs text-dim">Nur mit deinem @kulturspinnerei.ch-Konto</p>
+          {googleMeldung && <p className="border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">{googleMeldung}</p>}
 
           <div className="flex items-center gap-3 text-[11px] uppercase tracking-[.14em] text-mute">
             <span className="h-px flex-1 bg-line2" />

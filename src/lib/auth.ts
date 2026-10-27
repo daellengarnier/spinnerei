@@ -19,6 +19,7 @@ export interface AuthUser {
   avatarColor: string;
   avatarAttachmentId: number | null;
   mustChangePassword: boolean;
+  googleVerknuepft: boolean;
 }
 
 export function hashPassword(plain: string): string {
@@ -36,18 +37,22 @@ export async function createSession(userId: number): Promise<string> {
   return token;
 }
 
-export async function setSessionCookie(token: string): Promise<void> {
+export function sessionCookieOptions() {
   const secureEnv = process.env.COOKIE_SECURE ?? "auto";
   const secure =
     secureEnv === "true" ? true : secureEnv === "false" ? false : process.env.NODE_ENV === "production";
-  const store = await cookies();
-  store.set(SESSION_COOKIE, token, {
+  return {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure,
     path: "/",
     maxAge: SESSION_TTL_DAYS * 24 * 60 * 60,
-  });
+  };
+}
+
+export async function setSessionCookie(token: string): Promise<void> {
+  const store = await cookies();
+  store.set(SESSION_COOKIE, token, sessionCookieOptions());
 }
 
 export async function clearSessionCookie(): Promise<void> {
@@ -74,6 +79,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       avatarColor: users.avatarColor,
       avatarAttachmentId: users.avatarAttachmentId,
       mustChangePassword: users.mustChangePassword,
+      googleSub: users.googleSub,
       expiresAt: sessions.expiresAt,
     })
     .from(sessions)
@@ -90,6 +96,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     avatarColor: row.avatarColor,
     avatarAttachmentId: row.avatarAttachmentId,
     mustChangePassword: row.mustChangePassword,
+    googleVerknuepft: !!row.googleSub,
   };
 }
 

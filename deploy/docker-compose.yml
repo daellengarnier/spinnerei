@@ -47,6 +47,9 @@ services:
       PETZI_WEBHOOK_SECRET: ${PETZI_WEBHOOK_SECRET:-}
       # Google Drive API-Key (nur lesend) für Rider-Links; Wert in .env.
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      # «Mit Google anmelden» (OAuth-Client); leer = Knopf meldet «nicht eingerichtet».
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     depends_on:
       db:
         condition: service_healthy

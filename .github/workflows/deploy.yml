@@ -68,12 +68,14 @@ jobs:
           WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
           PETZI_WEBHOOK_SECRET: ${{ secrets.PETZI_WEBHOOK_SECRET }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          envs: WP_URL,WP_USER,WP_APP_PASSWORD,PETZI_WEBHOOK_SECRET,GOOGLE_API_KEY
+          envs: WP_URL,WP_USER,WP_APP_PASSWORD,PETZI_WEBHOOK_SECRET,GOOGLE_API_KEY,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET
           script: |
             set -euo pipefail
             cd /opt/spinnerei
@@ -107,6 +109,16 @@ jobs:
             if ! grep -q GOOGLE_API_KEY docker-compose.yml; then
               sed -i 's|^\(      PETZI_WEBHOOK_SECRET: .*\)$|\1\n      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}|' docker-compose.yml
               echo "docker-compose.yml um Google-API-Key ergänzt."
+            fi
+            # «Mit Google anmelden» (OAuth-Client der Domain kulturspinnerei.ch).
+            if [ -n "${GOOGLE_CLIENT_ID:-}" ] && [ -n "${GOOGLE_CLIENT_SECRET:-}" ]; then
+              grep -vE '^GOOGLE_CLIENT_(ID|SECRET)=' .env > .env.tmp || true
+              printf 'GOOGLE_CLIENT_ID=%s\nGOOGLE_CLIENT_SECRET=%s\n' "$GOOGLE_CLIENT_ID" "$GOOGLE_CLIENT_SECRET" >> .env.tmp
+              mv .env.tmp .env
+            fi
+            if ! grep -q GOOGLE_CLIENT_ID docker-compose.yml; then
+              sed -i 's|^\(      GOOGLE_API_KEY: .*\)$|\1\n      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}\n      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}|' docker-compose.yml
+              echo "docker-compose.yml um Google-Login ergänzt."
             fi
             docker compose pull
             docker compose up -d
