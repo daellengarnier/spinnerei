@@ -390,6 +390,8 @@ export const todos = pgTable("todos", {
   // Todo direkt am Anlass (ohne Bereich/Ressort). Todos mit ressortId gehören
   // über das Ressort zum Anlass; dieses Feld bleibt dort leer.
   anlassId: integer("anlassId").references(() => anlaesse.id, { onDelete: "cascade" }),
+  // Pendenz aus einer Vereinssitzung (HQ): an welcher Sitzung sie beschlossen wurde.
+  sitzungId: integer("sitzungId").references(() => sitzungen.id, { onDelete: "set null" }),
   titel: text("titel").notNull(),
   beschreibung: text("beschreibung").notNull().default(""),
   status: text("status").$type<TodoStatus>().notNull().default("offen"),

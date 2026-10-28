@@ -164,7 +164,7 @@ function SitzungBlock({ daten, onChanged }: { daten: HqDaten; onChanged: () => v
 
   return (
     <section>
-      <BlockTitel href={`/ressort/${rid}`} linkText="Alle Sitzungen">
+      <BlockTitel href={`/hq/${rid}`} linkText="Alle Sitzungen">
         Nächste Sitzung
       </BlockTitel>
       {s ? (
@@ -211,14 +211,14 @@ function SitzungBlock({ daten, onChanged }: { daten: HqDaten; onChanged: () => v
           </div>
         </div>
       ) : (
-        <Link href={`/ressort/${rid}`} className="block rounded-2xl bg-neutral-100 p-4 ring-1 ring-neutral-200 hover:bg-neutral-200/70 active:bg-neutral-200">
+        <Link href={`/hq/${rid}`} className="block rounded-2xl bg-neutral-100 p-4 ring-1 ring-neutral-200 hover:bg-neutral-200/70 active:bg-neutral-200">
           <p className="font-semibold text-neutral-950">Keine Sitzung geplant</p>
           <p className="mt-0.5 text-xs text-neutral-500">Tippen, um die nächste zu planen. Alle werden benachrichtigt.</p>
         </Link>
       )}
       {letzte && (!letzte.hatProtokoll || letzte.offeneTraktanden > 0) && (
         <Link
-          href={`/ressort/${rid}?vergangen=1`}
+          href={`/hq/${rid}?sitzung=${letzte.id}`}
           className="mt-2 flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-neutral-700 ring-1 ring-neutral-200 hover:bg-neutral-100 active:bg-neutral-100"
         >
           <span className="min-w-0 truncate">
@@ -246,7 +246,7 @@ function BookingBlock({ booking, onChanged }: { booking: NonNullable<HqDaten["bo
 
   return (
     <section>
-      <BlockTitel href={`/ressort/${booking.ressortId}`} linkText="Alle Anfragen">
+      <BlockTitel href={`/hq/${booking.ressortId}`} linkText="Alle Anfragen">
         Stimmungsbild Booking
       </BlockTitel>
       {booking.offenFuerMichCount === 0 ? (
@@ -397,7 +397,7 @@ function infoZeile(r: RessortSummary): string {
 function HqKachel({ ressort: r }: { ressort: RessortSummary }) {
   return (
     <Link
-      href={`/ressort/${r.id}`}
+      href={`/hq/${r.id}`}
       className="flex items-center gap-4 rounded-2xl bg-neutral-100 p-4 ring-1 ring-neutral-200 transition hover:bg-neutral-200/70 active:scale-[0.985] active:bg-neutral-200"
     >
       <span className="grid h-13 w-13 shrink-0 place-items-center rounded-xl bg-neutral-950 text-white">

@@ -19,8 +19,8 @@ const ICON: Record<string, IconName> = {
 function targetPath(it: ActivityItem): string {
   if (it.refTyp === "todo") return `/todo/${it.refId}`;
   if (it.refTyp === "ressort") return `/ressort/${it.refId}?tab=pinnwand`;
-  if (it.refTyp === "sitzung") return `/ressort/${it.refId}?tab=sitzungen`;
-  if (it.refTyp === "booking") return `/ressort/${it.refId}?tab=anfragen`;
+  if (it.refTyp === "sitzung") return `/hq/${it.refId}`;
+  if (it.refTyp === "booking") return `/hq/${it.refId}`;
   if (it.refTyp === "anlass") return `/anlass/${it.refId}`;
   if (it.refTyp === "anlass_chat") return `/anlass/${it.refId}?tab=chat`;
   return "/";

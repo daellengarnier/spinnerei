@@ -1,11 +1,11 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray, isNotNull, and } from "drizzle-orm";
 import { requireUser, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
-import { sitzungen, traktanden, users } from "@/lib/db/schema";
+import { sitzungen, todoAssignees, todos, traktanden, users } from "@/lib/db/schema";
 import { allUsers, notifyMany } from "@/lib/notify";
 import { formatDatumKurz } from "@/lib/datum";
 
-// Sitzungen eines Ressorts (HQ) inkl. Traktanden.
+// Sitzungen eines Ressorts (HQ) inkl. Traktanden und Pendenzen (Todos mit sitzungId).
 export async function GET(request: Request) {
   const auth = await requireUser();
   if (isResponse(auth)) return auth;
@@ -34,10 +34,28 @@ export async function GET(request: Request) {
         .orderBy(asc(traktanden.id))
     : [];
 
+  const pendenzen = await db
+    .select()
+    .from(todos)
+    .where(and(eq(todos.ressortId, ressortId), isNotNull(todos.sitzungId)))
+    .orderBy(asc(todos.id));
+  const zustaendige = pendenzen.length
+    ? await db
+        .select({ todoId: todoAssignees.todoId, id: users.id, name: users.name, avatarColor: users.avatarColor })
+        .from(todoAssignees)
+        .innerJoin(users, eq(users.id, todoAssignees.userId))
+        .where(inArray(todoAssignees.todoId, pendenzen.map((t) => t.id)))
+    : [];
+  const mitZustaendigen = pendenzen.map((t) => ({
+    ...t,
+    assignees: zustaendige.filter((z) => z.todoId === t.id).map(({ id, name, avatarColor }) => ({ id, name, avatarColor })),
+  }));
+
   return Response.json({
     sitzungen: liste.map((s) => ({
       ...s,
       traktanden: punkte.filter((p) => p.sitzungId === s.id),
+      pendenzen: mitZustaendigen.filter((t) => t.sitzungId === s.id),
     })),
   });
 }

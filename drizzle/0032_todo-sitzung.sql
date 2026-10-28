@@ -1,0 +1,2 @@
+ALTER TABLE "todos" ADD COLUMN "sitzungId" integer;--> statement-breakpoint
+ALTER TABLE "todos" ADD CONSTRAINT "todos_sitzungId_sitzungen_id_fk" FOREIGN KEY ("sitzungId") REFERENCES "public"."sitzungen"("id") ON DELETE set null ON UPDATE no action;

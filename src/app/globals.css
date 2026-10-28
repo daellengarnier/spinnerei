@@ -306,3 +306,99 @@ body {
 .prose-protocol li { @apply my-0.5; }
 .prose-protocol code { @apply px-1 py-0.5 text-[0.85em]; background: var(--color-surface2); }
 .prose-protocol strong { @apply font-semibold; }
+
+/* ─── HQ (Verein) ────────────────────────────────────────────────────────
+   Bewusst anderes Design als die Anlässe: hell, ruhig, gerundet, Barlow statt
+   Mono-Labels. Die Farb-Tokens werden umgedreht, damit alle Bausteine
+   (Todos, Pinnwand, Modals, Formulare) innerhalb von .hq-light mitziehen. */
+.hq-light {
+  --color-ink: #111;
+  --color-mute: #8a8a8a;
+  --color-dim: #666;
+  --color-sub: #666;
+  --color-label: #111;
+  --color-surface: #fff;
+  --color-surface2: #f4f4f4;
+  --color-line: #e7e7e7;
+  --color-line2: #d6d6d6;
+  --color-accent: #111;
+  --color-accent-dark: #111;
+  --color-accent-light: #eee;
+  --color-terra-light: #fdecea;
+  --color-terra-dark: #c2302a;
+  color: var(--color-ink);
+  background: #fff;
+}
+@layer components {
+  .hq-light .card {
+    border-radius: 1rem;
+  }
+  .hq-light .btn,
+  .hq-light .btn-primary,
+  .hq-light .btn-ghost,
+  .hq-light .btn-danger {
+    font-family: var(--font-sans);
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 600;
+    border-radius: 0.75rem;
+  }
+  .hq-light .btn-primary,
+  .hq-light .btn-ghost:hover,
+  .hq-light .seg-item.on {
+    color: #fff;
+  }
+  .hq-light .btn-primary:hover {
+    background: #333;
+  }
+  .hq-light .input {
+    border-radius: 0.6rem;
+    color-scheme: light;
+    background: #fff;
+  }
+  .hq-light .lbl,
+  .hq-light .label {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+  .hq-light .seg {
+    border-radius: 0.75rem;
+  }
+  .hq-light .pendenzen-liste {
+    border-radius: 0.75rem;
+  }
+  /* Sitzungsbuch: Einträge links. */
+  .sitzung-eintrag {
+    border: 1px solid var(--color-line);
+    background: var(--color-surface);
+    border-radius: 0.75rem;
+    transition: background 0.15s;
+  }
+  .sitzung-eintrag:hover {
+    background: var(--color-surface2);
+  }
+  .sitzung-eintrag.on {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: var(--color-surface);
+  }
+  .sitzung-tag {
+    border-radius: 999px;
+    background: var(--color-surface2);
+    color: var(--color-ink);
+    padding: 0 0.45rem;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .traktandum-check {
+    border-color: var(--color-line2);
+    color: transparent;
+    border-radius: 0.3rem;
+  }
+  .traktandum-check.on {
+    border-color: var(--color-ink);
+    background: var(--color-ink);
+    color: var(--color-surface);
+  }
+}

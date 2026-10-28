@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/apiClient";
 import { Avatar, EmptyState, Modal, Spinner } from "@/components/Ui";
 import { TodoRow } from "@/components/TodoRow";
@@ -31,6 +31,7 @@ const TAB_KEYS: TabKey[] = ["todos", "pinnwand", "zeitplan", "bars", "finanzen",
 
 export default function RessortPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const ressortId = Number(params.id);
   const [data, setData] = useState<DetailResponse | null>(null);
@@ -63,8 +64,14 @@ export default function RessortPage() {
     load();
   }, [load]);
 
+  // Vereinsressorts haben im HQ ihre eigene Seite (alte Links, Benachrichtigungen).
+  const hqRessort = data?.ressort.anlassId === null;
+  useEffect(() => {
+    if (hqRessort) router.replace(`/hq/${ressortId}${window.location.search}`);
+  }, [hqRessort, ressortId, router]);
+
   if (error) return <p className=" bg-terra-light px-3 py-2 text-sm text-terra-dark">{error}</p>;
-  if (!data) return <Spinner label="Lade Ressort …" />;
+  if (!data || hqRessort) return <Spinner label="Lade Ressort …" />;
 
   const { ressort, subRessorts, todos, protocols } = data;
   const todosWithoutSub = todos.filter((t) => !t.subRessortId);
