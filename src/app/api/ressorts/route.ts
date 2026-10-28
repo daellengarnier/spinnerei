@@ -85,21 +85,22 @@ export async function GET(request: Request) {
   return Response.json({ ressorts: result });
 }
 
-// Admin: oberstes Ressort anlegen.
+// Admin: oberstes Ressort anlegen. Mit hq: true als Vereinsressort im HQ.
 export async function POST(request: Request) {
   const auth = await requireAdmin();
   if (isResponse(auth)) return auth;
   const body = await request.json().catch(() => ({}));
   const name = String(body?.name ?? "").trim();
-  const anlassId = Number(body?.anlassId);
+  const hq = body?.hq === true;
+  const anlassId = hq ? null : Number(body?.anlassId);
   if (!name) return Response.json({ error: "Name erforderlich" }, { status: 400 });
-  if (!anlassId) return Response.json({ error: "anlassId erforderlich" }, { status: 400 });
+  if (!hq && !anlassId) return Response.json({ error: "anlassId erforderlich" }, { status: 400 });
 
   const db = getDb();
   const maxRow = await db
     .select({ m: max(ressorts.reihenfolge) })
     .from(ressorts)
-    .where(eq(ressorts.anlassId, anlassId));
+    .where(anlassId === null ? isNull(ressorts.anlassId) : eq(ressorts.anlassId, anlassId));
   const inserted = await db
     .insert(ressorts)
     .values({

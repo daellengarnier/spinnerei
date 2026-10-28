@@ -18,6 +18,7 @@ interface Sitzung {
   datum: string; // YYYY-MM-DD
   startzeit: string;
   ort: string;
+  protokoll: string;
   traktanden: Traktandum[];
 }
 
@@ -26,13 +27,17 @@ function heuteIso(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// HQ-Ressort «Sitzungen»: nächste Sitzung prominent, Traktanden direkt erfassbar.
+// HQ-Ressort «Sitzungen»: nächste Sitzung prominent, Traktanden direkt erfassbar,
+// Protokoll pro Sitzung. ?vergangen=1 klappt die vergangenen Sitzungen auf (Link aus dem HQ).
 export function Sitzungen({ ressortId }: { ressortId: number }) {
   const [sitzungen, setSitzungen] = useState<Sitzung[] | null>(null);
   const [error, setError] = useState("");
   const [neuOpen, setNeuOpen] = useState(false);
   const [edit, setEdit] = useState<Sitzung | null>(null);
-  const [vergangeneOffen, setVergangeneOffen] = useState(false);
+  // Hydration unkritisch: die Liste erscheint erst nach dem Laden im Browser.
+  const [vergangeneOffen, setVergangeneOffen] = useState(
+    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("vergangen") === "1",
+  );
 
   const load = useCallback(
     () =>
@@ -77,7 +82,15 @@ export function Sitzungen({ ressortId }: { ressortId: number }) {
           {vergangeneOffen && (
             <div className="mt-1 space-y-3 opacity-70">
               {vergangene.map((s) => (
-                <SitzungCard key={s.id} sitzung={s} istNaechste={false} onEdit={() => setEdit(s)} onChanged={load} />
+                <SitzungCard
+                  key={s.id}
+                  sitzung={s}
+                  istNaechste={false}
+                  vergangen
+                  naechsteGeplant={kommende.length > 0}
+                  onEdit={() => setEdit(s)}
+                  onChanged={load}
+                />
               ))}
             </div>
           )}
@@ -112,16 +125,32 @@ export function Sitzungen({ ressortId }: { ressortId: number }) {
 function SitzungCard({
   sitzung,
   istNaechste,
+  vergangen = false,
+  naechsteGeplant = false,
   onEdit,
   onChanged,
 }: {
   sitzung: Sitzung;
   istNaechste: boolean;
+  vergangen?: boolean;
+  naechsteGeplant?: boolean;
   onEdit: () => void;
   onChanged: () => void;
 }) {
   const [neuText, setNeuText] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uebernehmen, setUebernehmen] = useState(false);
+  const offene = sitzung.traktanden.filter((t) => !t.erledigt).length;
+
+  const offeneUebernehmen = async () => {
+    setUebernehmen(true);
+    try {
+      await api.post(`/sitzungen/${sitzung.id}/uebernehmen`);
+      onChanged();
+    } finally {
+      setUebernehmen(false);
+    }
+  };
 
   const addTraktandum = async () => {
     if (!neuText.trim() || saving) return;
@@ -203,8 +232,87 @@ function SitzungCard({
             <Icon name="plus" size={14} />
           </button>
         </div>
+        {vergangen && offene > 0 && naechsteGeplant && (
+          <button className="btn-ghost mt-2 w-full py-1.5 text-sm" onClick={offeneUebernehmen} disabled={uebernehmen}>
+            {uebernehmen ? "Verschiebe …" : `${offene} offene ${offene === 1 ? "Traktandum" : "Traktanden"} in die nächste Sitzung`}
+          </button>
+        )}
       </div>
+
+      <Protokoll sitzung={sitzung} onChanged={onChanged} />
     </section>
+  );
+}
+
+// Protokoll der Sitzung: zugeklappt, solange leer; Freitext mit Zeilenumbrüchen.
+function Protokoll({ sitzung, onChanged }: { sitzung: Sitzung; onChanged: () => void }) {
+  const [bearbeiten, setBearbeiten] = useState(false);
+  const [text, setText] = useState(sitzung.protokoll);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const save = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await api.patch(`/sitzungen/${sitzung.id}`, { protokoll: text });
+      setBearbeiten(false);
+      onChanged();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const vorlage = () =>
+    sitzung.traktanden.map((t, i) => `${i + 1}. ${t.text}\n`).join("\n");
+
+  return (
+    <div className="mt-3 border-t border-line pt-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="lbl">Protokoll</p>
+        {!bearbeiten && (
+          <button
+            className="text-xs text-dim underline-offset-2 active:scale-95"
+            onClick={() => {
+              setText(sitzung.protokoll || vorlage());
+              setBearbeiten(true);
+            }}
+          >
+            {sitzung.protokoll ? "Bearbeiten" : "Protokoll schreiben"}
+          </button>
+        )}
+      </div>
+      {bearbeiten ? (
+        <div className="mt-1.5 space-y-2">
+          <textarea
+            className="input min-h-48 w-full text-sm leading-relaxed"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Was wurde besprochen und entschieden?"
+            autoFocus
+          />
+          {error && <p className="err-box">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              className="btn-ghost flex-1 py-1.5 text-sm"
+              onClick={() => {
+                setText(sitzung.protokoll);
+                setBearbeiten(false);
+              }}
+            >
+              Abbrechen
+            </button>
+            <button className="btn-primary flex-1 py-1.5 text-sm" onClick={save} disabled={saving}>
+              {saving ? "Speichern …" : "Speichern"}
+            </button>
+          </div>
+        </div>
+      ) : sitzung.protokoll ? (
+        <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-ink">{sitzung.protokoll}</p>
+      ) : null}
+    </div>
   );
 }
 

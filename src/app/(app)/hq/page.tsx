@@ -1,46 +1,381 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/apiClient";
-import { Avatar, Spinner } from "@/components/Ui";
-import { formatDate } from "@/lib/uiUtil";
-import type { RessortSummary } from "@/lib/uiTypes";
+import { useAuth } from "@/components/AuthContext";
+import { Avatar, Modal, Spinner } from "@/components/Ui";
+import { formatDate, formatDateLong, isOverdue } from "@/lib/uiUtil";
+import type { RessortSummary, TodoStatus, Verfuegbarkeit } from "@/lib/uiTypes";
 
-// HQ (Headquarter): Vereinsressorts — bewusst invertiert zum Rest der App:
-// weisser Hintergrund, alles schwarz/weiss mit Graustufen, gerundete Kacheln.
+interface HqTraktandum {
+  id: number;
+  text: string;
+  erledigt: boolean;
+  autorName: string | null;
+}
+
+interface HqAnfrage {
+  id: number;
+  titel: string;
+  link: string;
+  autorName: string | null;
+  ja: number;
+  vielleicht: number;
+  nein: number;
+}
+
+interface HqTodo {
+  id: number;
+  titel: string;
+  status: TodoStatus;
+  fristDatum: string | null;
+  ressortName: string;
+  mir: boolean;
+}
+
+interface HqDaten {
+  sitzungsRessortId: number | null;
+  naechsteSitzung: { id: number; datum: string; startzeit: string; ort: string; traktanden: HqTraktandum[] } | null;
+  letzteSitzung: { id: number; datum: string; hatProtokoll: boolean; offeneTraktanden: number } | null;
+  booking: { ressortId: number; total: number; offenFuerMich: HqAnfrage[]; offenFuerMichCount: number } | null;
+  todos: { total: number; mir: number; liste: HqTodo[] };
+}
+
+// HQ (Headquarter): Cockpit des Vereins, unabhängig von den Anlässen.
+// Oben, was ansteht (nächste Sitzung, Stimmungsbild, offene Todos), darunter die Vereinsressorts.
+// Bewusst invertiert zum Rest der App: weisser Hintergrund, schwarz/weiss mit Graustufen, gerundete Kacheln.
 export default function HqPage() {
+  const { user } = useAuth();
   const [ressorts, setRessorts] = useState<RessortSummary[] | null>(null);
+  const [daten, setDaten] = useState<HqDaten | null>(null);
   const [error, setError] = useState("");
+  const [neuOpen, setNeuOpen] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api
       .get<{ ressorts: RessortSummary[] }>("/ressorts?hq=1")
       .then((d) => setRessorts(d.ressorts))
       .catch((e) => setError((e as Error).message));
+    api
+      .get<HqDaten>("/hq")
+      .then(setDaten)
+      .catch((e) => setError((e as Error).message));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   return (
     <div className="-mx-4 -mt-4 -mb-24 min-h-[100dvh] bg-white px-4 pb-28 pt-5">
       <div className="px-1">
         <h1 className="page-title text-neutral-950">HQ</h1>
-        <p className="mt-0.5 text-sm text-neutral-500">Vereinsressorts — unabhängig von den Anlässen</p>
+        <p className="mt-0.5 text-sm text-neutral-500">Verein: was ansteht, unabhängig von den Anlässen</p>
       </div>
 
       {error && <p className="mt-4 rounded-xl bg-neutral-100 px-3 py-2 text-sm text-neutral-700">{error}</p>}
 
-      {!ressorts && !error ? (
+      {!daten && !error ? (
         <div className="mt-6 text-neutral-500">
-          <Spinner label="Lade Ressorts …" />
+          <Spinner label="Lade HQ …" />
+        </div>
+      ) : daten ? (
+        <div className="mt-4 space-y-6">
+          <SitzungBlock daten={daten} onChanged={load} />
+          {daten.booking && daten.booking.total > 0 && <BookingBlock booking={daten.booking} onChanged={load} />}
+          <TodoBlock todos={daten.todos} />
+        </div>
+      ) : null}
+
+      <div className="mt-6">
+        <div className="mb-2 flex items-center justify-between px-1">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Ressorts</h2>
+          {user?.rolle === "admin" && (
+            <button className="text-xs font-semibold text-neutral-950 active:scale-95" onClick={() => setNeuOpen(true)}>
+              + Ressort
+            </button>
+          )}
+        </div>
+        {!ressorts && !error ? (
+          <div className="text-neutral-500">
+            <Spinner label="Lade Ressorts …" />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {(ressorts ?? []).map((r) => (
+              <HqKachel key={r.id} ressort={r} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {neuOpen && (
+        <NeuesRessortModal
+          onClose={() => setNeuOpen(false)}
+          onSaved={() => {
+            setNeuOpen(false);
+            load();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function BlockTitel({ children, href, linkText }: { children: React.ReactNode; href?: string; linkText?: string }) {
+  return (
+    <div className="mb-2 flex items-center justify-between px-1">
+      <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">{children}</h2>
+      {href && (
+        <Link href={href} className="text-xs font-semibold text-neutral-950">
+          {linkText} →
+        </Link>
+      )}
+    </div>
+  );
+}
+
+// Nächste Sitzung mit Traktanden zum direkten Ergänzen, dazu der Stand der letzten.
+function SitzungBlock({ daten, onChanged }: { daten: HqDaten; onChanged: () => void }) {
+  const { sitzungsRessortId: rid, naechsteSitzung: s, letzteSitzung: letzte } = daten;
+  const [neuText, setNeuText] = useState("");
+  const [saving, setSaving] = useState(false);
+  if (!rid) return null;
+
+  const add = async () => {
+    if (!s || !neuText.trim() || saving) return;
+    setSaving(true);
+    try {
+      await api.post(`/sitzungen/${s.id}/traktanden`, { text: neuText.trim() });
+      setNeuText("");
+      onChanged();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggle = async (t: HqTraktandum) => {
+    await api.patch(`/traktanden/${t.id}`, { erledigt: !t.erledigt });
+    onChanged();
+  };
+
+  return (
+    <section>
+      <BlockTitel href={`/ressort/${rid}`} linkText="Alle Sitzungen">
+        Nächste Sitzung
+      </BlockTitel>
+      {s ? (
+        <div className="rounded-2xl bg-neutral-950 p-4 text-white">
+          <p className="text-[17px] font-semibold">
+            {formatDateLong(s.datum)}
+            {s.startzeit && <span className="text-neutral-400"> · {s.startzeit} Uhr</span>}
+          </p>
+          {s.ort && <p className="mt-0.5 text-xs text-neutral-400">{s.ort}</p>}
+          <div className="mt-3 space-y-1 border-t border-neutral-800 pt-2.5">
+            {s.traktanden.length === 0 && <p className="text-xs text-neutral-400">Noch keine Traktanden. Schreib das erste rein.</p>}
+            {s.traktanden.map((t, i) => (
+              <button key={t.id} className="flex w-full items-start gap-2 py-0.5 text-left" onClick={() => toggle(t)}>
+                <span
+                  className={`mt-0.5 grid h-4.5 w-4.5 shrink-0 place-items-center rounded-md border text-[10px] ${
+                    t.erledigt ? "border-white bg-white text-neutral-950" : "border-neutral-600 text-transparent"
+                  }`}
+                >
+                  ✓
+                </span>
+                <span className={`min-w-0 flex-1 text-sm ${t.erledigt ? "text-neutral-500 line-through" : ""}`}>
+                  <span className="mr-1.5 text-xs text-neutral-500">{i + 1}.</span>
+                  {t.text}
+                  {t.autorName && <span className="ml-1.5 text-xs text-neutral-500">({t.autorName})</span>}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="mt-2.5 flex gap-2">
+            <input
+              className="min-w-0 flex-1 rounded-xl bg-neutral-800 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500"
+              placeholder="Traktandum hinzufügen …"
+              value={neuText}
+              onChange={(e) => setNeuText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && add()}
+            />
+            <button
+              className="shrink-0 rounded-xl bg-white px-3.5 text-sm font-semibold text-neutral-950 active:scale-95 disabled:opacity-40"
+              onClick={add}
+              disabled={saving || !neuText.trim()}
+            >
+              +
+            </button>
+          </div>
         </div>
       ) : (
-        <div className="mt-4 space-y-3">
-          {(ressorts ?? []).map((r) => (
-            <HqKachel key={r.id} ressort={r} />
+        <Link href={`/ressort/${rid}`} className="block rounded-2xl bg-neutral-100 p-4 ring-1 ring-neutral-200 active:bg-neutral-200">
+          <p className="font-semibold text-neutral-950">Keine Sitzung geplant</p>
+          <p className="mt-0.5 text-xs text-neutral-500">Tippen, um die nächste zu planen. Alle werden benachrichtigt.</p>
+        </Link>
+      )}
+      {letzte && (!letzte.hatProtokoll || letzte.offeneTraktanden > 0) && (
+        <Link
+          href={`/ressort/${rid}?vergangen=1`}
+          className="mt-2 flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-neutral-700 ring-1 ring-neutral-200 active:bg-neutral-100"
+        >
+          <span className="min-w-0 truncate">
+            Letzte Sitzung {formatDate(letzte.datum)}:{" "}
+            {[
+              !letzte.hatProtokoll && "Protokoll fehlt",
+              letzte.offeneTraktanden > 0 && `${letzte.offeneTraktanden} ${letzte.offeneTraktanden === 1 ? "Traktandum" : "Traktanden"} offen`,
+            ]
+              .filter(Boolean)
+              .join(", ")}
+          </span>
+          <span className="shrink-0 text-neutral-400">→</span>
+        </Link>
+      )}
+    </section>
+  );
+}
+
+// Booking-Anfragen, zu denen ich noch keine Stimme abgegeben habe, direkt bewertbar.
+function BookingBlock({ booking, onChanged }: { booking: NonNullable<HqDaten["booking"]>; onChanged: () => void }) {
+  const vote = async (id: number, wert: Verfuegbarkeit) => {
+    await api.post(`/booking/${id}/vote`, { wert });
+    onChanged();
+  };
+
+  return (
+    <section>
+      <BlockTitel href={`/ressort/${booking.ressortId}`} linkText="Alle Anfragen">
+        Stimmungsbild Booking
+      </BlockTitel>
+      {booking.offenFuerMichCount === 0 ? (
+        <p className="rounded-xl px-3 py-2 text-sm text-neutral-500 ring-1 ring-neutral-200">Du hast alle {booking.total} Anfragen bewertet.</p>
+      ) : (
+        <div className="space-y-2">
+          {booking.offenFuerMich.map((a) => (
+            <div key={a.id} className="rounded-2xl bg-neutral-100 p-3.5 ring-1 ring-neutral-200">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-neutral-950">
+                    {a.link ? (
+                      <a href={a.link} target="_blank" rel="noreferrer" className="underline decoration-neutral-300 underline-offset-2">
+                        {a.titel}
+                      </a>
+                    ) : (
+                      a.titel
+                    )}
+                  </p>
+                  <p className="mt-0.5 text-xs text-neutral-500">
+                    {a.autorName && `von ${a.autorName} · `}
+                    {a.ja} Ja, {a.vielleicht} Vielleicht, {a.nein} Nein
+                  </p>
+                </div>
+              </div>
+              <div className="mt-2.5 grid grid-cols-3 gap-1.5">
+                {(["ja", "vielleicht", "nein"] as const).map((w) => (
+                  <button
+                    key={w}
+                    className="rounded-lg bg-white py-1.5 text-sm font-medium text-neutral-950 ring-1 ring-neutral-300 active:bg-neutral-950 active:text-white"
+                    onClick={() => vote(a.id, w)}
+                  >
+                    {w === "ja" ? "Ja" : w === "vielleicht" ? "Vielleicht" : "Nein"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          {booking.offenFuerMichCount > booking.offenFuerMich.length && (
+            <p className="px-1 text-xs text-neutral-500">
+              und {booking.offenFuerMichCount - booking.offenFuerMich.length} weitere ohne deine Stimme
+            </p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// Offene Todos aller Vereinsressorts, meine zuerst.
+function TodoBlock({ todos }: { todos: HqDaten["todos"] }) {
+  return (
+    <section>
+      <BlockTitel>
+        Offene Todos{todos.total > 0 && ` · ${todos.total}${todos.mir > 0 ? `, ${todos.mir} bei dir` : ""}`}
+      </BlockTitel>
+      {todos.total === 0 ? (
+        <p className="rounded-xl px-3 py-2 text-sm text-neutral-500 ring-1 ring-neutral-200">Im Verein ist gerade nichts offen.</p>
+      ) : (
+        <div className="divide-y divide-neutral-200 overflow-hidden rounded-2xl ring-1 ring-neutral-200">
+          {todos.liste.map((t) => (
+            <Link key={t.id} href={`/todo/${t.id}`} className="flex items-center gap-3 px-3.5 py-2.5 active:bg-neutral-100">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-neutral-950">{t.titel}</p>
+                <p className="mt-0.5 truncate text-xs text-neutral-500">
+                  {t.ressortName}
+                  {t.status === "in_arbeit" && " · in Arbeit"}
+                </p>
+              </div>
+              {t.fristDatum && (
+                <span className={`shrink-0 text-xs ${isOverdue(t.fristDatum, t.status) ? "font-semibold text-neutral-950 underline" : "text-neutral-500"}`}>
+                  {formatDate(t.fristDatum)}
+                </span>
+              )}
+              {t.mir && <span className="shrink-0 rounded-full bg-neutral-950 px-2 py-0.5 text-[11px] font-bold text-white">Du</span>}
+            </Link>
           ))}
         </div>
       )}
-    </div>
+    </section>
+  );
+}
+
+function NeuesRessortModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState("");
+  const [beschreibung, setBeschreibung] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const save = async () => {
+    if (!name.trim()) return setError("Name erforderlich");
+    setSaving(true);
+    setError("");
+    try {
+      await api.post("/ressorts", { hq: true, name: name.trim(), beschreibung: beschreibung.trim(), farbe: "#a3a3a3" });
+      onSaved();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Neues HQ-Ressort"
+      footer={
+        <div className="flex gap-2">
+          <button className="btn-ghost flex-1" onClick={onClose}>
+            Abbrechen
+          </button>
+          <button className="btn-primary flex-1" onClick={save} disabled={saving}>
+            {saving ? "Speichern …" : "Anlegen"}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="label">Name</label>
+          <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Mitglieder" autoFocus />
+        </div>
+        <div>
+          <label className="label">Beschreibung (optional)</label>
+          <input className="input" value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} />
+        </div>
+        {error && <p className="err-box">{error}</p>}
+      </div>
+    </Modal>
   );
 }
 

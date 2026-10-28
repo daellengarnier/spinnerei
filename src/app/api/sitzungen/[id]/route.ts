@@ -3,7 +3,7 @@ import { requireUser, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
 import { sitzungen } from "@/lib/db/schema";
 
-// Sitzung ändern (Datum, Zeit, Ort).
+// Sitzung ändern (Datum, Zeit, Ort, Protokoll).
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireUser();
   if (isResponse(auth)) return auth;
@@ -11,7 +11,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!id) return Response.json({ error: "Ungültige ID" }, { status: 400 });
   const body = await request.json().catch(() => ({}));
 
-  const patch: Partial<{ datum: string; startzeit: string; ort: string }> = {};
+  const patch: Partial<{ datum: string; startzeit: string; ort: string; protokoll: string }> = {};
   if (body?.datum !== undefined) {
     const datum = String(body.datum).trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(datum)) return Response.json({ error: "Datum als YYYY-MM-DD" }, { status: 400 });
@@ -23,6 +23,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     patch.startzeit = zeit;
   }
   if (body?.ort !== undefined) patch.ort = String(body.ort).trim();
+  if (body?.protokoll !== undefined) patch.protokoll = String(body.protokoll);
   if (Object.keys(patch).length === 0) return Response.json({ error: "Nichts zu ändern" }, { status: 400 });
 
   await getDb().update(sitzungen).set(patch).where(eq(sitzungen.id, id));

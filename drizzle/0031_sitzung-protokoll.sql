@@ -1,0 +1,1 @@
+ALTER TABLE "sitzungen" ADD COLUMN "protokoll" text DEFAULT '' NOT NULL;

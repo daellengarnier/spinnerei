@@ -128,6 +128,8 @@ export const sitzungen = pgTable("sitzungen", {
   datum: text("datum").notNull(), // 'YYYY-MM-DD'
   startzeit: text("startzeit").notNull().default(""), // 'HH:MM'
   ort: text("ort").notNull().default(""),
+  // Protokoll der Sitzung (Markdown/Freitext), leer = noch keins.
+  protokoll: text("protokoll").notNull().default(""),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
 });
 
