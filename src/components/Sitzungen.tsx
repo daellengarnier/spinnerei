@@ -59,41 +59,42 @@ export function Sitzungen({ ressortId }: { ressortId: number }) {
   const kommende = sitzungen.filter((s) => s.datum >= heute);
   const vergangene = sitzungen.filter((s) => s.datum < heute).reverse();
 
+  // Desktop: kommende links, vergangene rechts (dort immer aufgeklappt).
   return (
-    <div className="space-y-3">
-      <button className="btn-primary w-full" onClick={() => setNeuOpen(true)}>
-        <Icon name="plus" size={17} /> Sitzung planen
-      </button>
+    <div className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
+      <div className="space-y-3">
+        <button className="btn-primary w-full" onClick={() => setNeuOpen(true)}>
+          <Icon name="plus" size={17} /> Sitzung planen
+        </button>
 
-      {kommende.length === 0 ? (
-        <EmptyState title="Keine Sitzung geplant" hint="Plane oben die nächste Sitzung — alle werden benachrichtigt." />
-      ) : (
-        kommende.map((s, i) => (
-          <SitzungCard key={s.id} sitzung={s} istNaechste={i === 0} onEdit={() => setEdit(s)} onChanged={load} />
-        ))
-      )}
+        {kommende.length === 0 ? (
+          <EmptyState title="Keine Sitzung geplant" hint="Plane oben die nächste Sitzung, alle werden benachrichtigt." />
+        ) : (
+          kommende.map((s, i) => (
+            <SitzungCard key={s.id} sitzung={s} istNaechste={i === 0} onEdit={() => setEdit(s)} onChanged={load} />
+          ))
+        )}
+      </div>
 
       {vergangene.length > 0 && (
         <div>
-          <button className="flex w-full items-center justify-between gap-3 px-1 py-1" onClick={() => setVergangeneOffen((o) => !o)}>
+          <button className="flex w-full items-center justify-between gap-3 px-1 py-1 lg:pointer-events-none lg:py-2.5" onClick={() => setVergangeneOffen((o) => !o)}>
             <span className="lbl">Vergangene ({vergangene.length})</span>
-            <Icon name="chevron" size={14} className={`text-mute transition-transform ${vergangeneOffen ? "-rotate-90" : "rotate-90"}`} />
+            <Icon name="chevron" size={14} className={`text-mute transition-transform lg:hidden ${vergangeneOffen ? "-rotate-90" : "rotate-90"}`} />
           </button>
-          {vergangeneOffen && (
-            <div className="mt-1 space-y-3 opacity-70">
-              {vergangene.map((s) => (
-                <SitzungCard
-                  key={s.id}
-                  sitzung={s}
-                  istNaechste={false}
-                  vergangen
-                  naechsteGeplant={kommende.length > 0}
-                  onEdit={() => setEdit(s)}
-                  onChanged={load}
-                />
-              ))}
-            </div>
-          )}
+          <div className={`mt-1 space-y-3 opacity-70 lg:block ${vergangeneOffen ? "" : "hidden"}`}>
+            {vergangene.map((s) => (
+              <SitzungCard
+                key={s.id}
+                sitzung={s}
+                istNaechste={false}
+                vergangen
+                naechsteGeplant={kommende.length > 0}
+                onEdit={() => setEdit(s)}
+                onChanged={load}
+              />
+            ))}
+          </div>
         </div>
       )}
 

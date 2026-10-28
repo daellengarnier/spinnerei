@@ -68,7 +68,7 @@ export default function HqPage() {
   }, [load]);
 
   return (
-    <div className="-mx-4 -mt-4 -mb-24 min-h-[100dvh] bg-white px-4 pb-28 pt-5">
+    <div className="-mx-4 -mt-4 -mb-24 min-h-[100dvh] bg-white px-4 pb-28 pt-5 lg:m-0 lg:min-h-0 lg:rounded-3xl lg:px-8 lg:pb-8 lg:pt-7">
       <div className="px-1">
         <h1 className="page-title text-neutral-950">HQ</h1>
         <p className="mt-0.5 text-sm text-neutral-500">Verein: was ansteht, unabhängig von den Anlässen</p>
@@ -81,18 +81,20 @@ export default function HqPage() {
           <Spinner label="Lade HQ …" />
         </div>
       ) : daten ? (
-        <div className="mt-4 space-y-6">
+        <div className="mt-4 grid gap-6 lg:mt-6 lg:grid-cols-2 lg:items-start lg:gap-8">
           <SitzungBlock daten={daten} onChanged={load} />
-          {daten.booking && daten.booking.total > 0 && <BookingBlock booking={daten.booking} onChanged={load} />}
-          <TodoBlock todos={daten.todos} />
+          <div className="space-y-6">
+            {daten.booking && daten.booking.total > 0 && <BookingBlock booking={daten.booking} onChanged={load} />}
+            <TodoBlock todos={daten.todos} />
+          </div>
         </div>
       ) : null}
 
-      <div className="mt-6">
+      <div className="mt-6 lg:mt-8">
         <div className="mb-2 flex items-center justify-between px-1">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Ressorts</h2>
           {user?.rolle === "admin" && (
-            <button className="text-xs font-semibold text-neutral-950 active:scale-95" onClick={() => setNeuOpen(true)}>
+            <button className="text-xs font-semibold text-neutral-950 hover:underline active:scale-95" onClick={() => setNeuOpen(true)}>
               + Ressort
             </button>
           )}
@@ -102,7 +104,7 @@ export default function HqPage() {
             <Spinner label="Lade Ressorts …" />
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {(ressorts ?? []).map((r) => (
               <HqKachel key={r.id} ressort={r} />
             ))}
@@ -128,7 +130,7 @@ function BlockTitel({ children, href, linkText }: { children: React.ReactNode; h
     <div className="mb-2 flex items-center justify-between px-1">
       <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">{children}</h2>
       {href && (
-        <Link href={href} className="text-xs font-semibold text-neutral-950">
+        <Link href={href} className="text-xs font-semibold text-neutral-950 hover:underline">
           {linkText} →
         </Link>
       )}
@@ -175,7 +177,7 @@ function SitzungBlock({ daten, onChanged }: { daten: HqDaten; onChanged: () => v
           <div className="mt-3 space-y-1 border-t border-neutral-800 pt-2.5">
             {s.traktanden.length === 0 && <p className="text-xs text-neutral-400">Noch keine Traktanden. Schreib das erste rein.</p>}
             {s.traktanden.map((t, i) => (
-              <button key={t.id} className="flex w-full items-start gap-2 py-0.5 text-left" onClick={() => toggle(t)}>
+              <button key={t.id} className="flex w-full items-start gap-2 rounded-md py-0.5 text-left hover:bg-neutral-900" onClick={() => toggle(t)}>
                 <span
                   className={`mt-0.5 grid h-4.5 w-4.5 shrink-0 place-items-center rounded-md border text-[10px] ${
                     t.erledigt ? "border-white bg-white text-neutral-950" : "border-neutral-600 text-transparent"
@@ -209,7 +211,7 @@ function SitzungBlock({ daten, onChanged }: { daten: HqDaten; onChanged: () => v
           </div>
         </div>
       ) : (
-        <Link href={`/ressort/${rid}`} className="block rounded-2xl bg-neutral-100 p-4 ring-1 ring-neutral-200 active:bg-neutral-200">
+        <Link href={`/ressort/${rid}`} className="block rounded-2xl bg-neutral-100 p-4 ring-1 ring-neutral-200 hover:bg-neutral-200/70 active:bg-neutral-200">
           <p className="font-semibold text-neutral-950">Keine Sitzung geplant</p>
           <p className="mt-0.5 text-xs text-neutral-500">Tippen, um die nächste zu planen. Alle werden benachrichtigt.</p>
         </Link>
@@ -217,7 +219,7 @@ function SitzungBlock({ daten, onChanged }: { daten: HqDaten; onChanged: () => v
       {letzte && (!letzte.hatProtokoll || letzte.offeneTraktanden > 0) && (
         <Link
           href={`/ressort/${rid}?vergangen=1`}
-          className="mt-2 flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-neutral-700 ring-1 ring-neutral-200 active:bg-neutral-100"
+          className="mt-2 flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-neutral-700 ring-1 ring-neutral-200 hover:bg-neutral-100 active:bg-neutral-100"
         >
           <span className="min-w-0 truncate">
             Letzte Sitzung {formatDate(letzte.datum)}:{" "}
@@ -274,7 +276,7 @@ function BookingBlock({ booking, onChanged }: { booking: NonNullable<HqDaten["bo
                 {(["ja", "vielleicht", "nein"] as const).map((w) => (
                   <button
                     key={w}
-                    className="rounded-lg bg-white py-1.5 text-sm font-medium text-neutral-950 ring-1 ring-neutral-300 active:bg-neutral-950 active:text-white"
+                    className="rounded-lg bg-white py-1.5 text-sm font-medium text-neutral-950 ring-1 ring-neutral-300 hover:bg-neutral-950 hover:text-white active:bg-neutral-950 active:text-white"
                     onClick={() => vote(a.id, w)}
                   >
                     {w === "ja" ? "Ja" : w === "vielleicht" ? "Vielleicht" : "Nein"}
@@ -306,7 +308,7 @@ function TodoBlock({ todos }: { todos: HqDaten["todos"] }) {
       ) : (
         <div className="divide-y divide-neutral-200 overflow-hidden rounded-2xl ring-1 ring-neutral-200">
           {todos.liste.map((t) => (
-            <Link key={t.id} href={`/todo/${t.id}`} className="flex items-center gap-3 px-3.5 py-2.5 active:bg-neutral-100">
+            <Link key={t.id} href={`/todo/${t.id}`} className="flex items-center gap-3 px-3.5 py-2.5 hover:bg-neutral-50 active:bg-neutral-100">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-neutral-950">{t.titel}</p>
                 <p className="mt-0.5 truncate text-xs text-neutral-500">
@@ -396,7 +398,7 @@ function HqKachel({ ressort: r }: { ressort: RessortSummary }) {
   return (
     <Link
       href={`/ressort/${r.id}`}
-      className="flex items-center gap-4 rounded-2xl bg-neutral-100 p-4 ring-1 ring-neutral-200 transition active:scale-[0.985] active:bg-neutral-200"
+      className="flex items-center gap-4 rounded-2xl bg-neutral-100 p-4 ring-1 ring-neutral-200 transition hover:bg-neutral-200/70 active:scale-[0.985] active:bg-neutral-200"
     >
       <span className="grid h-13 w-13 shrink-0 place-items-center rounded-xl bg-neutral-950 text-white">
         <HqIcon name={r.name} size={26} />

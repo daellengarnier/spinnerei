@@ -78,10 +78,11 @@ export function Abrechnung({ anlassId }: { anlassId: number }) {
   // Aufschlüsselung der berechneten Zahlen (nur Anzeige, ändert nichts).
   const e = erklaereAbrechnung(daten, b, gagenActs, sonstige);
 
+  // Desktop: Blöcke in zwei Spalten, Lesereihenfolge bleibt von oben nach unten.
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 lg:columns-2 lg:gap-4 lg:space-y-0 lg:[&>*]:mb-4 lg:[&>*]:break-inside-avoid">
       {/* Zusammenzug */}
-      <div className="card p-4">
+      <div className="card p-4 lg:[column-span:all]">
         <Zusammenzug
           kennzahlen={[
             { key: "gewinnVerlust", label: "Gewinn / Verlust", cents: b.gewinnVerlustCents, gross: true, farbe: gewinn ? "text-[#6fcf7a]" : "text-[#e05c5c]" },

@@ -42,7 +42,7 @@ function neuesJahr(vorher: string, datum: string) {
 
 function JahrTrenner({ jahr }: { jahr: string }) {
   return (
-    <div className="flex items-center gap-3 px-1 pt-2">
+    <div className="flex items-center gap-3 px-1 pt-2 lg:col-span-2">
       <div className="h-px flex-1 bg-line2" />
       <span className="text-xs text-mute">{jahr}</span>
       <div className="h-px flex-1 bg-line2" />
@@ -89,7 +89,7 @@ export default function AnlaesseUebersicht() {
         <h1 className="page-title">
           {hi}, <span className="brand-text">{user?.name}</span>
         </h1>
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-2 lg:max-w-md">
           <a href="https://spinnplan-23.netlify.app" target="_blank" rel="noopener noreferrer" className="btn-ghost py-1.5 text-sm">
             <Icon name="external" size={15} /> Spinnplan
           </a>
@@ -111,7 +111,7 @@ export default function AnlaesseUebersicht() {
         ) : kommende.length === 0 ? (
           <EmptyState title="Keine kommenden Anlässe" hint={user?.rolle === "admin" ? "Lege oben einen Anlass an." : "Der Admin legt Anlässe an."} />
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
             {kommende.map((a, i) => (
               <Fragment key={a.id}>
                 {i > 0 && neuesJahr(kommende[i - 1].datum, a.datum) && <JahrTrenner jahr={a.datum.slice(0, 4)} />}
@@ -131,7 +131,7 @@ export default function AnlaesseUebersicht() {
             <Icon name="chevron" size={16} className={`text-mute transition-transform ${archivOffen ? "-rotate-90" : "rotate-90"}`} />
           </button>
           {archivOffen && (
-            <div className="space-y-2.5 opacity-70">
+            <div className="space-y-2.5 opacity-70 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
               {vergangene.map((a, i) => (
                 <Fragment key={a.id}>
                   {i > 0 && neuesJahr(vergangene[i - 1].datum, a.datum) && <JahrTrenner jahr={a.datum.slice(0, 4)} />}

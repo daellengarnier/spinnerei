@@ -17,6 +17,18 @@ const TABS: { href: string; label: string; icon: IconName; exact: boolean; badge
   { href: "/hq", label: "HQ", icon: "tent", exact: false },
 ];
 
+// Home-Tab gilt auch innerhalb eines Anlasses/Ressorts als aktiv.
+function tabAktiv(t: (typeof TABS)[number], pathname: string): boolean {
+  return t.exact
+    ? pathname === t.href || ["/anlass", "/ressort", "/todo"].some((p) => pathname.startsWith(p))
+    : pathname.startsWith(t.href);
+}
+
+// Seiten, die auf dem Desktop die volle Breite nutzen (Raster, Timeline).
+function seiteBreit(pathname: string): boolean {
+  return pathname === "/" || ["/hq", "/anlass", "/ressort"].some((p) => pathname.startsWith(p));
+}
+
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
@@ -126,7 +138,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-2xl flex-col">
+    <div className="mx-auto flex min-h-screen max-w-2xl flex-col lg:max-w-6xl">
       <header className="pt-safe brand-header sticky top-0 z-30">
         <div className="flex items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center gap-2.5">
@@ -138,8 +150,23 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <span className="brand-sub">Orga</span>
             </span>
           </Link>
+          {/* Desktop: Tabs in der Kopfzeile statt unten. */}
+          <nav className="hidden flex-1 items-center justify-center gap-1 lg:flex">
+            {TABS.map((t) => (
+              <Link
+                key={t.href}
+                href={t.href}
+                className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-colors ${
+                  tabAktiv(t, pathname) ? "bg-surface text-white" : "text-white/60 hover:bg-surface/60 hover:text-white"
+                }`}
+              >
+                <Icon name={t.icon} size={18} />
+                {t.label}
+              </Link>
+            ))}
+          </nav>
           <div className="flex items-center gap-1">
-            <Link href="/inbox" className="relative grid h-10 w-10 place-items-center rounded-full text-white/90 active:scale-95" aria-label="Benachrichtigungen">
+            <Link href="/inbox" className="relative grid h-10 w-10 place-items-center rounded-full text-white/90 hover:bg-surface/60 active:scale-95" aria-label="Benachrichtigungen">
               <Icon name="bell" size={22} />
               {unread > 0 && (
                 <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-terra px-1 text-[10px] font-bold text-white ring-2 ring-accent">
@@ -203,7 +230,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-4 pb-24">
+      <main className="flex-1 px-4 py-4 pb-24 lg:px-8 lg:py-6 lg:pb-12">
         {googleMeldung && (
           <button
             onClick={() => setGoogleMeldung("")}
@@ -213,16 +240,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </button>
         )}
         <PushPrompt />
-        {children}
+        {/* Listen- und Formularseiten bleiben auf dem Desktop lesbar schmal. */}
+        <div className={seiteBreit(pathname) ? "" : "lg:mx-auto lg:max-w-3xl"}>{children}</div>
       </main>
 
-      <nav className="pb-safe tabbar fixed inset-x-0 bottom-0 z-30 mx-auto max-w-2xl">
+      <nav className="pb-safe tabbar fixed inset-x-0 bottom-0 z-30 mx-auto max-w-2xl lg:hidden">
         <div className="grid grid-cols-3 px-2 pt-1">
           {TABS.map((t) => {
-            // Home-Tab gilt auch innerhalb eines Anlasses/Ressorts als aktiv.
-            const isActive = t.exact
-              ? pathname === t.href || ["/anlass", "/ressort", "/todo"].some((p) => pathname.startsWith(p))
-              : pathname.startsWith(t.href);
+            const isActive = tabAktiv(t, pathname);
             return (
               <Link key={t.href} href={t.href} className={`relative flex flex-col items-center gap-0.5 py-1 text-[10px] font-extrabold ${isActive ? "text-white" : "text-white/60"}`}>
                 <span className={`relative grid h-7 w-[58px] place-items-center rounded-full transition-colors ${isActive ? "bg-surface text-white" : "text-white/70"}`}>

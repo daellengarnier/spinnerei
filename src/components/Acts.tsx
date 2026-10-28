@@ -50,7 +50,7 @@ export function Acts({ ressortId }: { ressortId: number }) {
       ) : acts.length === 0 ? (
         <EmptyState title="Noch keine Acts" hint="Füge einen Act hinzu — die Zeiten landen automatisch in der Anlassübersicht." />
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-2.5 lg:space-y-0">
           {sortiert.map((a) => (
             <ActCard key={a.id} act={a} onOpen={() => setModal(a)} />
           ))}

@@ -127,7 +127,7 @@ export default function AnlassDashboard() {
   const finanzRessort = ressorts?.find((r) => r.hatFinanzen);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 lg:mx-auto lg:max-w-5xl">
       <div className="px-1 pt-1">
         <Link href="/" className="text-sm text-mute">
           ← Alle Anlässe
@@ -174,10 +174,11 @@ export default function AnlassDashboard() {
       </nav>
 
       {tab === "uebersicht" && (
-        <>
+        // Desktop: Anlassübersicht links, «Wer macht was» rechts daneben.
+        <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-4 lg:space-y-0">
           <Uebersicht anlass={anlass} acts={acts} verkaufteTickets={verkaufteTickets} onSaved={(a) => setAnlass(a)} />
           <Bereiche ressorts={ressorts} isAdmin={user?.rolle === "admin"} />
-        </>
+        </div>
       )}
 
       {tab === "todos" && <AnlassTodos anlassId={anlassId} onNeu={() => setTodoEntwurf("")} />}
@@ -248,7 +249,7 @@ function Bereiche({ ressorts, isAdmin }: { ressorts: RessortSummary[] | null; is
   return (
     <section className="card p-3.5">
       <h2 className="block-title mb-2">Wer macht was</h2>
-      <div className="grid grid-cols-1 gap-0.5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-0.5 sm:grid-cols-2 lg:grid-cols-1">
         {ressorts.map((r) => (
           <Link key={r.id} href={`/ressort/${r.id}`} className="row-hover flex items-center gap-2 px-1 py-1.5 text-sm">
             <span className="grid h-6 w-6 shrink-0 place-items-center" style={{ background: `${r.farbe}1c`, color: r.farbe }}>

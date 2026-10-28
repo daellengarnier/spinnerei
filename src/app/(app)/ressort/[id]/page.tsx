@@ -88,7 +88,8 @@ export default function RessortPage() {
               : "todos");
 
   return (
-    <div className="space-y-4">
+    // Desktop: lesbare Breite, nur die Timeline (Line-up/Bars) nutzt die volle Breite.
+    <div className={`space-y-4 ${activeTab === "zeitplan" || activeTab === "bars" ? "" : "lg:mx-auto lg:max-w-5xl"}`}>
       {/* Kopf ohne Box – Titel prominent mit farbigem Punkt. */}
       <div className="px-1 pt-1">
         <Link href={ressort.anlassId != null ? `/anlass/${ressort.anlassId}` : "/hq"} className="text-sm text-mute">
