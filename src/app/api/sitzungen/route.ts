@@ -31,7 +31,7 @@ export async function GET(request: Request) {
         .from(traktanden)
         .leftJoin(users, eq(users.id, traktanden.erstelltVon))
         .where(inArray(traktanden.sitzungId, liste.map((s) => s.id)))
-        .orderBy(asc(traktanden.id))
+        .orderBy(asc(traktanden.reihenfolge), asc(traktanden.id))
     : [];
 
   const pendenzen = await db

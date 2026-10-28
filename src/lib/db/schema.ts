@@ -128,8 +128,11 @@ export const sitzungen = pgTable("sitzungen", {
   datum: text("datum").notNull(), // 'YYYY-MM-DD'
   startzeit: text("startzeit").notNull().default(""), // 'HH:MM'
   ort: text("ort").notNull().default(""),
-  // Protokoll der Sitzung (Markdown/Freitext), leer = noch keins.
+  // Weitere Notizen zur Sitzung (Freitext); das eigentliche Protokoll steht
+  // pro Traktandum in traktanden.notizen.
   protokoll: text("protokoll").notNull().default(""),
+  sitzungsleitung: text("sitzungsleitung").notNull().default(""),
+  protokollfuehrung: text("protokollfuehrung").notNull().default(""),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -139,10 +142,27 @@ export const traktanden = pgTable("traktanden", {
     .notNull()
     .references(() => sitzungen.id, { onDelete: "cascade" }),
   text: text("text").notNull(),
+  // Protokoll zu diesem Traktandum: was besprochen und entschieden wurde.
+  notizen: text("notizen").notNull().default(""),
+  reihenfolge: integer("reihenfolge").notNull().default(0),
   erledigt: boolean("erledigt").notNull().default(false),
   erstelltVon: integer("erstelltVon").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Wer an einer Sitzung dabei war.
+export const sitzungAnwesende = pgTable(
+  "sitzung_anwesende",
+  {
+    sitzungId: integer("sitzungId")
+      .notNull()
+      .references(() => sitzungen.id, { onDelete: "cascade" }),
+    userId: integer("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.sitzungId, t.userId] })],
+);
 
 // Booking-Anfragen/Ideen (HQ-Ressort Booking) mit Stimmungsbild pro Person.
 export const bookingAnfragen = pgTable("booking_anfragen", {
@@ -392,6 +412,11 @@ export const todos = pgTable("todos", {
   anlassId: integer("anlassId").references(() => anlaesse.id, { onDelete: "cascade" }),
   // Pendenz aus einer Vereinssitzung (HQ): an welcher Sitzung sie beschlossen wurde.
   sitzungId: integer("sitzungId").references(() => sitzungen.id, { onDelete: "set null" }),
+  // … und aus welchem Traktandum.
+  traktandumId: integer("traktandumId").references(() => traktanden.id, { onDelete: "set null" }),
+  // Wann und mit welcher Notiz erledigt (erscheint in der nächsten Sitzung).
+  erledigtAm: timestamp("erledigtAm", { withTimezone: true }),
+  erledigtNotiz: text("erledigtNotiz").notNull().default(""),
   titel: text("titel").notNull(),
   beschreibung: text("beschreibung").notNull().default(""),
   status: text("status").$type<TodoStatus>().notNull().default("offen"),

@@ -239,6 +239,20 @@
       "when": 1793185411246,
       "tag": "0033_sitzungen-import",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793187524776,
+      "tag": "0034_sitzung-detail",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793187730219,
+      "tag": "0035_sitzungen-traktanden-notizen",
+      "breakpoints": true
     }
   ]
 }

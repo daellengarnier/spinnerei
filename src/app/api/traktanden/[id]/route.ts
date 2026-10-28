@@ -3,7 +3,7 @@ import { requireUser, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
 import { traktanden } from "@/lib/db/schema";
 
-// Traktandum abhaken / Text ändern.
+// Traktandum abhaken, Titel oder Notizen (Protokoll) ändern.
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireUser();
   if (isResponse(auth)) return auth;
@@ -11,8 +11,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!id) return Response.json({ error: "Ungültige ID" }, { status: 400 });
   const body = await request.json().catch(() => ({}));
 
-  const patch: Partial<{ erledigt: boolean; text: string }> = {};
+  const patch: Partial<{ erledigt: boolean; text: string; notizen: string }> = {};
   if (body?.erledigt !== undefined) patch.erledigt = !!body.erledigt;
+  if (body?.notizen !== undefined) patch.notizen = String(body.notizen);
   if (body?.text !== undefined) {
     const text = String(body.text).trim();
     if (!text) return Response.json({ error: "Text darf nicht leer sein" }, { status: 400 });

@@ -169,10 +169,13 @@ function SitzungBlock({ daten, onChanged }: { daten: HqDaten; onChanged: () => v
       </BlockTitel>
       {s ? (
         <div className="rounded-2xl bg-neutral-950 p-4 text-white">
-          <p className="text-[17px] font-semibold">
-            {formatDateLong(s.datum)}
-            {s.startzeit && <span className="text-neutral-400"> · {s.startzeit} Uhr</span>}
-          </p>
+          <Link href={`/hq/sitzung/${s.id}`} className="group flex items-start justify-between gap-3">
+            <p className="text-[17px] font-semibold group-hover:underline">
+              {formatDateLong(s.datum)}
+              {s.startzeit && <span className="text-neutral-400"> · {s.startzeit} Uhr</span>}
+            </p>
+            <span className="shrink-0 text-xs font-semibold text-neutral-400 group-hover:text-white">Öffnen →</span>
+          </Link>
           {s.ort && <p className="mt-0.5 text-xs text-neutral-400">{s.ort}</p>}
           <div className="mt-3 space-y-1 border-t border-neutral-800 pt-2.5">
             {s.traktanden.length === 0 && <p className="text-xs text-neutral-400">Noch keine Traktanden. Schreib das erste rein.</p>}
@@ -218,7 +221,7 @@ function SitzungBlock({ daten, onChanged }: { daten: HqDaten; onChanged: () => v
       )}
       {letzte && (!letzte.hatProtokoll || letzte.offeneTraktanden > 0) && (
         <Link
-          href={`/hq/${rid}?sitzung=${letzte.id}`}
+          href={`/hq/sitzung/${letzte.id}`}
           className="mt-2 flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-neutral-700 ring-1 ring-neutral-200 hover:bg-neutral-100 active:bg-neutral-100"
         >
           <span className="min-w-0 truncate">

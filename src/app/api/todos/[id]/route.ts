@@ -34,7 +34,12 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   const patch: Partial<typeof todos.$inferInsert> = {};
   if (body?.titel !== undefined) patch.titel = String(body.titel).trim();
   if (body?.beschreibung !== undefined) patch.beschreibung = String(body.beschreibung);
-  if (body?.status !== undefined && STATUS.includes(body.status)) patch.status = body.status;
+  if (body?.status !== undefined && STATUS.includes(body.status)) {
+    patch.status = body.status;
+    // Erledigt-Zeitpunkt für «Erledigt seit der letzten Sitzung».
+    patch.erledigtAm = body.status === "erledigt" ? new Date() : null;
+  }
+  if (body?.erledigtNotiz !== undefined) patch.erledigtNotiz = String(body.erledigtNotiz).trim();
   if (body?.fristDatum !== undefined) patch.fristDatum = body.fristDatum || null;
   if (body?.subRessortId !== undefined) patch.subRessortId = body.subRessortId ? Number(body.subRessortId) : null;
   // Bereich wechseln (nur innerhalb desselben Anlasses): ressortId setzen oder

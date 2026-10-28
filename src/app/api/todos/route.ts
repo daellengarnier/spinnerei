@@ -36,6 +36,7 @@ export async function POST(request: Request) {
       anlassId,
       subRessortId: ressortId !== null && body?.subRessortId ? Number(body.subRessortId) : null,
       sitzungId: ressortId !== null && body?.sitzungId ? Number(body.sitzungId) : null,
+      traktandumId: ressortId !== null && body?.traktandumId ? Number(body.traktandumId) : null,
       titel,
       beschreibung: String(body?.beschreibung ?? ""),
       status,
