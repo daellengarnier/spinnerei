@@ -7,6 +7,7 @@ import { useAuth } from "@/components/AuthContext";
 import { Avatar, Modal, Spinner } from "@/components/Ui";
 import { formatDate, formatDateLong, isOverdue } from "@/lib/uiUtil";
 import type { RessortSummary, TodoStatus, Verfuegbarkeit } from "@/lib/uiTypes";
+import { STANDARD_TRAKTANDEN, istStandardTraktandum } from "@/lib/sitzungStandard";
 
 interface HqTraktandum {
   id: number;
@@ -157,10 +158,8 @@ function SitzungBlock({ daten, onChanged }: { daten: HqDaten; onChanged: () => v
     }
   };
 
-  const toggle = async (t: HqTraktandum) => {
-    await api.patch(`/traktanden/${t.id}`, { erledigt: !t.erledigt });
-    onChanged();
-  };
+  // Nur die zusätzlich eingetragenen Traktanden; der feste Ablauf steht als eine Zeile.
+  const weitere = s ? s.traktanden.filter((t) => !istStandardTraktandum(t.text)) : [];
 
   return (
     <section>
@@ -177,29 +176,31 @@ function SitzungBlock({ daten, onChanged }: { daten: HqDaten; onChanged: () => v
             <span className="shrink-0 text-xs font-semibold text-neutral-400 group-hover:text-white">Öffnen →</span>
           </Link>
           {s.ort && <p className="mt-0.5 text-xs text-neutral-400">{s.ort}</p>}
-          <div className="mt-3 space-y-1 border-t border-neutral-800 pt-2.5">
-            {s.traktanden.length === 0 && <p className="text-xs text-neutral-400">Noch keine Traktanden. Schreib das erste rein.</p>}
-            {s.traktanden.map((t, i) => (
-              <button key={t.id} className="flex w-full items-start gap-2 rounded-md py-0.5 text-left hover:bg-neutral-900" onClick={() => toggle(t)}>
-                <span
-                  className={`mt-0.5 grid h-4.5 w-4.5 shrink-0 place-items-center rounded-md border text-[10px] ${
-                    t.erledigt ? "border-white bg-white text-neutral-950" : "border-neutral-600 text-transparent"
-                  }`}
-                >
-                  ✓
-                </span>
-                <span className={`min-w-0 flex-1 text-sm ${t.erledigt ? "text-neutral-500 line-through" : ""}`}>
-                  <span className="mr-1.5 text-xs text-neutral-500">{i + 1}.</span>
-                  {t.text}
-                  {t.autorName && <span className="ml-1.5 text-xs text-neutral-500">({t.autorName})</span>}
-                </span>
-              </button>
-            ))}
+          <div className="mt-3 border-t border-neutral-800 pt-2.5">
+            <p className="text-xs text-neutral-400">
+              <span className="font-semibold text-neutral-300">Immer dabei:</span> {STANDARD_TRAKTANDEN.map((t) => t.label).join(" · ")}
+            </p>
+            <p className="mb-1 mt-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">Weitere Traktanden</p>
+            {weitere.length === 0 ? (
+              <p className="text-sm text-neutral-400">Noch nichts eingetragen. Was möchtest du besprechen?</p>
+            ) : (
+              <ul className="space-y-1">
+                {weitere.map((t) => (
+                  <li key={t.id} className="flex items-start gap-2 text-sm">
+                    <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-neutral-500" aria-hidden="true" />
+                    <span className="min-w-0 flex-1">
+                      {t.text}
+                      {t.autorName && <span className="ml-1.5 text-xs text-neutral-500">({t.autorName})</span>}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           <div className="mt-2.5 flex gap-2">
             <input
               className="min-w-0 flex-1 rounded-xl bg-neutral-800 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500"
-              placeholder="Traktandum hinzufügen …"
+              placeholder="Weiteres Traktandum eingeben …"
               value={neuText}
               onChange={(e) => setNeuText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && add()}
@@ -219,19 +220,13 @@ function SitzungBlock({ daten, onChanged }: { daten: HqDaten; onChanged: () => v
           <p className="mt-0.5 text-xs text-neutral-500">Tippen, um die nächste zu planen. Alle werden benachrichtigt.</p>
         </Link>
       )}
-      {letzte && (!letzte.hatProtokoll || letzte.offeneTraktanden > 0) && (
+      {letzte && !letzte.hatProtokoll && (
         <Link
           href={`/hq/sitzung/${letzte.id}`}
           className="mt-2 flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-neutral-700 ring-1 ring-neutral-200 hover:bg-neutral-100 active:bg-neutral-100"
         >
           <span className="min-w-0 truncate">
-            Letzte Sitzung {formatDate(letzte.datum)}:{" "}
-            {[
-              !letzte.hatProtokoll && "Protokoll fehlt",
-              letzte.offeneTraktanden > 0 && `${letzte.offeneTraktanden} ${letzte.offeneTraktanden === 1 ? "Traktandum" : "Traktanden"} offen`,
-            ]
-              .filter(Boolean)
-              .join(", ")}
+            Letzte Sitzung {formatDate(letzte.datum)}: Protokoll fehlt
           </span>
           <span className="shrink-0 text-neutral-400">→</span>
         </Link>
