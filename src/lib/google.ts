@@ -42,6 +42,23 @@ export function authUrl(state: string): string {
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 }
 
+// Drive verbinden (Admin): zusätzlich Schreibrecht aufs Drive und ein
+// Refresh-Token (access_type=offline, prompt=consent liefert es zuverlässig).
+export function driveAuthUrl(state: string, scope: string): string {
+  const c = googleConfig();
+  const params = new URLSearchParams({
+    client_id: c.clientId,
+    redirect_uri: c.redirectUri,
+    response_type: "code",
+    scope: `openid email ${scope}`,
+    state,
+    hd: c.domain,
+    access_type: "offline",
+    prompt: "consent",
+  });
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+}
+
 export interface GoogleIdentitaet {
   sub: string;
   email: string;
@@ -54,8 +71,19 @@ export type GoogleFehler = "fehler" | "domain";
 // ID-Token kommt direkt vom Token-Endpunkt (TLS, mit Client-Secret), daher
 // genügt die Prüfung der Claims (OpenID Connect Core 3.1.3.7).
 export async function identitaetAusCode(code: string): Promise<GoogleIdentitaet | GoogleFehler> {
+  return (await codeTauschen(code)).id;
+}
+
+// Wie identitaetAusCode, plus Refresh-Token (nur beim Drive-Verbinden angefragt).
+export async function identitaetUndRefreshToken(code: string) {
+  return codeTauschen(code);
+}
+
+async function codeTauschen(code: string): Promise<{ id: GoogleIdentitaet | GoogleFehler; refreshToken: string | null }> {
+  const fehler = { id: "fehler" as const, refreshToken: null };
   const c = googleConfig();
   let idToken: string | undefined;
+  let refreshToken: string | null = null;
   try {
     const res = await fetch(c.tokenEndpoint, {
       method: "POST",
@@ -72,32 +100,34 @@ export async function identitaetAusCode(code: string): Promise<GoogleIdentitaet 
     });
     if (!res.ok) {
       console.warn("Google-Token-Tausch fehlgeschlagen:", res.status);
-      return "fehler";
+      return fehler;
     }
-    idToken = ((await res.json()) as { id_token?: string }).id_token;
+    const tokens = (await res.json()) as { id_token?: string; refresh_token?: string };
+    idToken = tokens.id_token;
+    refreshToken = tokens.refresh_token ?? null;
   } catch (e) {
     console.warn("Google-Token-Tausch fehlgeschlagen:", e);
-    return "fehler";
+    return fehler;
   }
-  if (!idToken) return "fehler";
+  if (!idToken) return fehler;
 
   let claims: Record<string, unknown>;
   try {
     claims = JSON.parse(Buffer.from(idToken.split(".")[1] ?? "", "base64url").toString("utf8"));
   } catch {
-    return "fehler";
+    return fehler;
   }
   const iss = String(claims.iss ?? "");
   const exp = Number(claims.exp ?? 0);
   if (claims.aud !== c.clientId || (iss !== "https://accounts.google.com" && iss !== "accounts.google.com") || exp * 1000 < Date.now()) {
-    return "fehler";
+    return fehler;
   }
   const email = String(claims.email ?? "").toLowerCase();
   const sub = String(claims.sub ?? "");
-  if (!sub || !email || claims.email_verified !== true) return "fehler";
+  if (!sub || !email || claims.email_verified !== true) return fehler;
   // Nur Konten der Spinnerei-Domain: «hd» (Workspace) UND die E-Mail-Domain.
-  if (String(claims.hd ?? "").toLowerCase() !== c.domain || !email.endsWith(`@${c.domain}`)) return "domain";
-  return { sub, email, name: String(claims.name ?? "").trim() || email.split("@")[0] };
+  if (String(claims.hd ?? "").toLowerCase() !== c.domain || !email.endsWith(`@${c.domain}`)) return { id: "domain", refreshToken: null };
+  return { id: { sub, email, name: String(claims.name ?? "").trim() || email.split("@")[0] }, refreshToken };
 }
 
 // Kurzlebiges, signiertes Cookie für «Wer bist du?» (Google-Konto noch ohne

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/apiClient";
 import { Avatar, Modal, Spinner } from "@/components/Ui";
@@ -28,7 +28,10 @@ interface AdminRessort {
 const COLORS = ["#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", "#22c55e", "#14b8a6", "#06b6d4", "#3b82f6", "#6366f1", "#8b5cf6", "#d946ef", "#ec4899", "#64748b"];
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<"users" | "ressorts">("users");
+  // Rückkehr vom Drive-Verbinden (?drive=…) öffnet direkt den Belege-Tab.
+  const [tab, setTab] = useState<"users" | "ressorts" | "belege">(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).has("drive") ? "belege" : "users",
+  );
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -44,8 +47,11 @@ export default function AdminPage() {
         <button className={`flex-1  py-2 ${tab === "ressorts" ? "bg-surface shadow-sm" : "text-dim"}`} onClick={() => setTab("ressorts")}>
           Ressorts
         </button>
+        <button className={`flex-1  py-2 ${tab === "belege" ? "bg-surface shadow-sm" : "text-dim"}`} onClick={() => setTab("belege")}>
+          Belege & Sicherung
+        </button>
       </div>
-      {tab === "users" ? <UsersAdmin /> : <RessortsAdmin />}
+      {tab === "users" ? <UsersAdmin /> : tab === "ressorts" ? <RessortsAdmin /> : <BelegeAdmin />}
     </div>
   );
 }
@@ -383,5 +389,119 @@ function RessortEditModal({
         )}
       </div>
     </Modal>
+  );
+}
+
+interface DriveStand {
+  verbunden: boolean;
+  konto: string | null;
+  ordnerUrl: string;
+  belegeTotal: number;
+  ausstehend: number;
+}
+
+// Beleg-Ablage im Google Drive und Sicherheitskopie der Finanzdaten.
+function BelegeAdmin() {
+  const [stand, setStand] = useState<DriveStand | null>(null);
+  const [error, setError] = useState("");
+  const [laeuft, setLaeuft] = useState(false);
+  const [meldung, setMeldung] = useState(() => {
+    const d = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("drive") : null;
+    return d === "verbunden" ? "Google Drive ist verbunden." : d === "fehler" ? "Das Verbinden mit Google Drive hat nicht geklappt." : "";
+  });
+
+  const load = useCallback(() => {
+    api
+      .get<DriveStand>("/admin/drive")
+      .then(setStand)
+      .catch((e) => setError((e as Error).message));
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const ablegen = async () => {
+    setLaeuft(true);
+    setMeldung("");
+    let total = 0;
+    const fehler: string[] = [];
+    try {
+      // In Portionen, bis nichts mehr aussteht.
+      for (;;) {
+        const r = await api.post<{ abgelegt: number; fehler: string[]; weitere: boolean }>("/admin/drive/belege");
+        total += r.abgelegt;
+        fehler.push(...r.fehler);
+        if (!r.weitere) break;
+      }
+      setMeldung(`${total} ${total === 1 ? "Beleg" : "Belege"} abgelegt.${fehler.length ? ` Nicht geklappt: ${fehler.join("; ")}` : ""}`);
+    } catch (e) {
+      setMeldung((e as Error).message);
+    } finally {
+      setLaeuft(false);
+      load();
+    }
+  };
+
+  const trennen = async () => {
+    await api.del("/admin/drive");
+    load();
+  };
+
+  if (error) return <p className="err-box">{error}</p>;
+  if (!stand) return <Spinner label="Lade …" />;
+
+  return (
+    <div className="space-y-4">
+      <section className="card space-y-3 p-4">
+        <h2 className="block-title">Sicherheitskopie</h2>
+        <p className="text-sm text-dim">
+          Alle Finanzdaten in einer Datei: Abrechnungen, Ausgaben mit Belegen, Budgets und Petzi-Tickets. Nur lesend, es wird nichts verändert.
+          Zusätzlich sichert der Server die ganze Datenbank jede Nacht.
+        </p>
+        <a className="btn-primary w-full" href="/api/admin/sicherung">
+          <Icon name="download" size={16} /> Sicherung herunterladen
+        </a>
+      </section>
+
+      <section className="card space-y-3 p-4">
+        <h2 className="block-title">Belege im Google Drive</h2>
+        <p className="text-sm text-dim">
+          Hochgeladene Belege landen automatisch im Finanzen-Ordner unter dem Jahr, z. B. «2026», benannt nach Datum, Anlass, Kategorie und Betrag.
+        </p>
+        {stand.verbunden ? (
+          <>
+            <p className="text-sm">
+              Verbunden mit <span className="font-semibold">{stand.konto}</span>.{" "}
+              <a href={stand.ordnerUrl} target="_blank" rel="noreferrer" className="underline">
+                Ordner öffnen
+              </a>
+            </p>
+            <p className="text-sm text-dim">
+              {stand.belegeTotal - stand.ausstehend} von {stand.belegeTotal} Belegen abgelegt.
+            </p>
+            {stand.ausstehend > 0 && (
+              <button className="btn-primary w-full" onClick={ablegen} disabled={laeuft}>
+                {laeuft ? "Lege ab …" : `${stand.ausstehend} bisherige ${stand.ausstehend === 1 ? "Beleg" : "Belege"} jetzt ablegen`}
+              </button>
+            )}
+            <button className="text-xs text-dim underline" onClick={trennen}>
+              Verbindung trennen
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="text-sm">
+              Noch nicht verbunden. Am besten mit <span className="font-semibold">info@kulturspinnerei.ch</span> verbinden, dem Konto mit Schreibrecht auf den
+              Finanzen-Ordner.
+            </p>
+            <a className="btn-primary w-full" href="/api/auth/google?modus=drive">
+              Mit Google Drive verbinden
+            </a>
+          </>
+        )}
+        {meldung && <p className="text-sm">{meldung}</p>}
+      </section>
+    </div>
   );
 }

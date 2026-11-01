@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { belegAblegenStill } from "@/lib/googleDrive";
 import { eq, desc } from "drizzle-orm";
 import { requireUser, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
@@ -28,6 +30,7 @@ export async function GET(request: Request) {
       belegId: expenses.belegId,
       belegMime: attachments.mime,
       belegFilename: attachments.filename,
+      belegImDrive: attachments.driveFileId,
     })
     .from(expenses)
     .leftJoin(users, eq(users.id, expenses.userId))
@@ -63,5 +66,7 @@ export async function POST(request: Request) {
       belegId: body?.belegId ? Number(body.belegId) : null,
     })
     .returning({ id: expenses.id });
+  // Beleg nach der Antwort ins Google Drive legen (falls verbunden).
+  if (body?.belegId) after(() => belegAblegenStill(inserted[0].id));
   return Response.json({ id: inserted[0].id }, { status: 201 });
 }

@@ -12,8 +12,10 @@ import {
   cookieSecure,
   googleConfig,
   identitaetAusCode,
+  identitaetUndRefreshToken,
   pendingWert,
 } from "@/lib/google";
+import { driveVerbindungSpeichern } from "@/lib/googleDrive";
 
 // Rückkehr von Google: Identität prüfen, dann
 // 1. Konto mit dieser Google-Kennung → anmelden,
@@ -37,6 +39,16 @@ export async function GET(request: Request) {
     !!erwartet && erwartet.length === state.length && crypto.timingSafeEqual(Buffer.from(erwartet), Buffer.from(state));
   if (url.searchParams.get("error")) return ziel("/login?google=abgebrochen");
   if (!code || !stateOk) return ziel("/login?google=fehler");
+
+  // Admin verbindet Google Drive (Beleg-Ablage): Refresh-Token speichern.
+  if (modus === "drive") {
+    const ich = await getCurrentUser();
+    if (ich?.rolle !== "admin") return ziel("/");
+    const { id: konto, refreshToken } = await identitaetUndRefreshToken(code);
+    if (typeof konto === "string" || !refreshToken) return ziel("/admin?drive=fehler");
+    await driveVerbindungSpeichern(refreshToken, konto.email);
+    return ziel("/admin?drive=verbunden");
+  }
 
   const id = await identitaetAusCode(code);
   if (id === "domain") return ziel(modus === "verknuepfen" ? "/?google=domain" : "/login?google=domain");

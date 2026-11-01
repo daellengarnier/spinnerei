@@ -83,6 +83,8 @@ export interface Expense {
   belegId: number | null;
   belegMime: string | null;
   belegFilename: string | null;
+  // Drive-Datei-ID, sobald der Beleg im Google Drive abgelegt ist.
+  belegImDrive?: string | null;
 }
 
 export interface CategoryBudget {

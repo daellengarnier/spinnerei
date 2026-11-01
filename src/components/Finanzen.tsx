@@ -178,7 +178,11 @@ export function Finanzen({ ressortId, anlassId }: { ressortId: number; anlassId:
                                 {e.beschreibung || k.kategorie}
                                 {e.userName && <span className="ml-1 text-xs text-dim">· {e.userId === user?.id ? "du" : e.userName}</span>}
                               </span>
-                              {e.belegId && <Icon name="file" size={13} className="shrink-0 text-dim" />}
+                              {e.belegId && (
+                                <span title={e.belegImDrive ? "Beleg im Google Drive abgelegt" : "Beleg noch nicht im Drive"}>
+                                  <Icon name="file" size={13} className={`shrink-0 ${e.belegImDrive ? "text-accent" : "text-dim"}`} />
+                                </span>
+                              )}
                               <span className="shrink-0 font-semibold tabular-nums text-ink">CHF {formatChf(e.betragCents)}</span>
                             </button>
                           ),

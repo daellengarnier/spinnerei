@@ -120,6 +120,16 @@ jobs:
               sed -i 's|^\(      GOOGLE_API_KEY: .*\)$|\1\n      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}\n      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}|' docker-compose.yml
               echo "docker-compose.yml um Google-Login ergänzt."
             fi
+            # Sicherung vor jedem Deploy (Migrationen laufen beim Start der App):
+            # ganze Datenbank als gzip-Dump. Klappt sie nicht, bricht der Deploy ab.
+            mkdir -p backups && chmod 700 backups
+            if docker ps --format '{{.Names}}' | grep -qx spinnerei-db; then
+              d="backups/spinnerei_$(date +%Y%m%d_%H%M%S)_vor-deploy.sql.gz"
+              docker exec spinnerei-db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner' | gzip > "$d.tmp"
+              [ "$(zcat "$d.tmp" | tail -n 5 | grep -c 'dump complete')" -ge 1 ]
+              mv "$d.tmp" "$d" && chmod 600 "$d"
+              echo "Sicherung vor dem Deploy: $d ($(du -h "$d" | cut -f1))"
+            fi
             docker compose pull
             docker compose up -d
             docker image prune -f

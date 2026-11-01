@@ -1,0 +1,42 @@
+# Tägliche Sicherung der ganzen Datenbank auf dem VPS (nur lesend):
+# /opt/spinnerei/backups/spinnerei_<Datum>.sql.gz, 60 Tage aufbewahrt.
+# Dazu sichert der Deploy vor jeder Migration (deploy.yml).
+# Zurückspielen: zcat <Datei> | docker exec -i spinnerei-db psql -U spinnerei -d spinnerei
+name: Sicherung Datenbank
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/backup.yml]
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sicherung via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            cd /opt/spinnerei
+            mkdir -p backups && chmod 700 backups
+            d="backups/spinnerei_$(date +%Y%m%d_%H%M%S).sql.gz"
+            docker exec spinnerei-db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner' | gzip > "$d.tmp"
+            # Nur behalten, was vollständig ist und die Finanztabellen enthält.
+            [ "$(zcat "$d.tmp" | tail -n 5 | grep -c 'dump complete')" -ge 1 ]
+            [ "$(zcat "$d.tmp" | grep -c 'CREATE TABLE public.abrechnungen')" -ge 1 ]
+            mv "$d.tmp" "$d" && chmod 600 "$d"
+            # Alte Sicherungen (älter als 60 Tage) entfernen, nur eigene Dateien.
+            find backups -maxdepth 1 -name 'spinnerei_*.sql.gz' -mtime +60 -delete
+            echo "Neu: $d ($(du -h "$d" | cut -f1))"
+            echo "Abrechnungen in der DB: $(docker exec spinnerei-db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "select count(*) from abrechnungen"')"
+            echo "Ausgaben mit Beleg: $(docker exec spinnerei-db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "select count(*) from expenses where \"belegId\" is not null"')"
+            ls -1 backups | tail -n 5
+            df -h /opt | tail -n 1

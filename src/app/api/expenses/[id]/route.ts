@@ -1,4 +1,6 @@
 import { eq } from "drizzle-orm";
+import { after } from "next/server";
+import { belegAblegenStill } from "@/lib/googleDrive";
 import { requireUser, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
 import { expenses } from "@/lib/db/schema";
@@ -26,6 +28,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   if (body?.datum !== undefined) patch.datum = body.datum || null;
   if (body?.belegId !== undefined) patch.belegId = body.belegId ? Number(body.belegId) : null;
   if (Object.keys(patch).length > 0) await db.update(expenses).set(patch).where(eq(expenses.id, Number(id)));
+  if (patch.belegId) after(() => belegAblegenStill(Number(id)));
   return Response.json({ ok: true });
 }
 

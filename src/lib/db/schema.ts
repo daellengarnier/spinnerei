@@ -242,6 +242,9 @@ export const attachments = pgTable("attachments", {
   size: integer("size").notNull().default(0),
   dataB64: text("dataB64").notNull(),
   uploadedBy: integer("uploadedBy").references(() => users.id, { onDelete: "set null" }),
+  // Beleg im Google Drive abgelegt (Finanzen/<Jahr>); null = noch nicht.
+  driveFileId: text("driveFileId"),
+  driveAbgelegtAm: timestamp("driveAbgelegtAm", { withTimezone: true }),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
 });
 
