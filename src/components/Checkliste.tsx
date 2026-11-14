@@ -330,11 +330,6 @@ function PunktZeile({
                 <p className="text-sm italic text-dim">Noch keine Beschreibung.</p>
               )}
               <div className="flex flex-wrap gap-3 text-xs">
-                {abhakbar && !done && vergeben && !meins && (
-                  <button className="inline-flex items-center gap-1 text-accent" onClick={() => onUebernehmen(true)}>
-                    <Icon name="user" size={12} /> Selbst übernehmen
-                  </button>
-                )}
                 <button className="inline-flex items-center gap-1 text-dim" onClick={startBearbeiten}>
                   <Icon name="pencil" size={12} /> Bearbeiten
                 </button>
