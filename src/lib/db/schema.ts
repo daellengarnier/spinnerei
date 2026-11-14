@@ -114,6 +114,8 @@ export const ressorts = pgTable("ressorts", {
   hatSitzungen: boolean("hatSitzungen").notNull().default(false),
   // HQ-Ressort Booking: Anfragen/Ideen mit Stimmungsbild.
   hatBooking: boolean("hatBooking").notNull().default(false),
+  // Ressort Putzen & Vorbereitung: Todos kommen aus der gemeinsamen Checkliste (vorlage_punkte).
+  hatVorlage: boolean("hatVorlage").notNull().default(false),
   // Externe Verantwortliche ohne App-Konto (z. B. «Bäscht»), kommagetrennt.
   externeLeads: text("externeLeads").notNull().default(""),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
@@ -400,6 +402,16 @@ export const shoppingItems = pgTable("shopping_items", {
   menge: text("menge").notNull().default(""),
   erledigt: boolean("erledigt").notNull().default(false),
   createdBy: integer("createdBy").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Checkliste Putzen & Vorbereitung: Vorlage, die jeder neue Anlass als Todos bekommt.
+// Pflegen dürfen alle Mitglieder (nicht nur Admins).
+export const vorlagePunkte = pgTable("vorlage_punkte", {
+  id: serial("id").primaryKey(),
+  titel: text("titel").notNull(),
+  beschreibung: text("beschreibung").notNull().default(""),
+  reihenfolge: integer("reihenfolge").notNull().default(0),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
 });
 

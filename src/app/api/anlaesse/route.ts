@@ -5,6 +5,7 @@ import { anlaesse, ressorts, todos } from "@/lib/db/schema";
 import { allUsers, notifyMany } from "@/lib/notify";
 import { formatDatumKurz } from "@/lib/datum";
 import { STANDARD_RESSORTS } from "@/lib/standardRessorts";
+import { vorlageInRessort } from "@/lib/vorlage";
 
 // Alle Anlässe, chronologisch, mit Anzahl offener Todos.
 export async function GET() {
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
     slug = `${slugBase}-${i}`;
   }
   const inserted = await db.insert(anlaesse).values({ slug, name, datum }).returning({ id: anlaesse.id });
-  await db.insert(ressorts).values(
+  const neueRessorts = await db.insert(ressorts).values(
     STANDARD_RESSORTS.map((r, i) => ({
       anlassId: inserted[0].id,
       name: r.name,
@@ -64,8 +65,11 @@ export async function POST(request: Request) {
       reihenfolge: i + 1,
       hatActs: "hatActs" in r && r.hatActs,
       hatFinanzen: "hatFinanzen" in r && r.hatFinanzen,
+      hatVorlage: "hatVorlage" in r && r.hatVorlage,
     })),
-  );
+  ).returning({ id: ressorts.id, hatVorlage: ressorts.hatVorlage });
+  // Checkliste Putzen & Vorbereitung gleich als Todos mitgeben.
+  for (const r of neueRessorts.filter((x) => x.hatVorlage)) await vorlageInRessort(r.id, auth.id);
 
   // Alle Mitglieder benachrichtigen (Inbox + Push).
   const alle = await allUsers();

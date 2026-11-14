@@ -34,6 +34,7 @@ export interface RessortSummary {
   hatFinanzen?: boolean;
   hatSitzungen?: boolean;
   hatBooking?: boolean;
+  hatVorlage?: boolean;
   externeLeads?: string;
   leads: UserLite[];
   openTodos: number;
@@ -57,6 +58,7 @@ export interface Ressort {
   hatActs?: boolean;
   hatSitzungen?: boolean;
   hatBooking?: boolean;
+  hatVorlage?: boolean;
   externeLeads?: string;
   leads: UserLite[];
 }
@@ -293,4 +295,11 @@ export interface ActivityItem {
   createdAt: string;
   actorName: string | null;
   actorColor: string | null;
+}
+
+export interface VorlagePunkt {
+  id: number;
+  titel: string;
+  beschreibung: string;
+  reihenfolge: number;
 }

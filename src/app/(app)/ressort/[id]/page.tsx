@@ -15,6 +15,7 @@ import { Acts } from "@/components/Acts";
 import { Abrechnung } from "@/components/Abrechnung";
 import { Sitzungen } from "@/components/Sitzungen";
 import { Booking } from "@/components/Booking";
+import { Checkliste } from "@/components/Checkliste";
 import { relTime } from "@/lib/uiUtil";
 import type { ProtocolRef, Ressort, SubRessort, Todo } from "@/lib/uiTypes";
 import { Icon } from "@/components/Icon";
@@ -26,8 +27,8 @@ interface DetailResponse {
   protocols: ProtocolRef[];
 }
 
-type TabKey = "todos" | "pinnwand" | "zeitplan" | "bars" | "finanzen" | "abrechnung" | "acts" | "sitzungen" | "anfragen";
-const TAB_KEYS: TabKey[] = ["todos", "pinnwand", "zeitplan", "bars", "finanzen", "abrechnung", "acts", "sitzungen", "anfragen"];
+type TabKey = "todos" | "checkliste" | "pinnwand" | "zeitplan" | "bars" | "finanzen" | "abrechnung" | "acts" | "sitzungen" | "anfragen";
+const TAB_KEYS: TabKey[] = ["todos", "checkliste", "pinnwand", "zeitplan", "bars", "finanzen", "abrechnung", "acts", "sitzungen", "anfragen"];
 
 export default function RessortPage() {
   const params = useParams<{ id: string }>();
@@ -194,6 +195,11 @@ export default function RessortPage() {
                 </span>
               )}
             </button>
+            {ressort.hatVorlage && (
+              <button className={`seg-item whitespace-nowrap px-3 ${activeTab === "checkliste" ? "on" : ""}`} onClick={() => setTab("checkliste")}>
+                Checkliste
+              </button>
+            )}
             <button className={`seg-item whitespace-nowrap px-3 ${activeTab === "pinnwand" ? "on" : ""}`} onClick={() => setTab("pinnwand")}>
               Pinnwand
             </button>
@@ -215,6 +221,8 @@ export default function RessortPage() {
         <Zeitplan ressortId={ressortId} board="programm" mode="acts" />
       ) : activeTab === "bars" ? (
         <Zeitplan ressortId={ressortId} board="bars" mode="bars" />
+      ) : activeTab === "checkliste" ? (
+        <Checkliste ressortId={ressortId} onUebernommen={load} />
       ) : activeTab === "todos" ? (
         <div className="space-y-4">
           <div className="flex gap-2">

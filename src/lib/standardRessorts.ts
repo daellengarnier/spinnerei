@@ -9,4 +9,5 @@ export const STANDARD_RESSORTS = [
   { name: "Promo", farbe: "#eab308" },
   { name: "Sicherheit", farbe: "#ef4444" },
   { name: "Finanzen", farbe: "#8b5cf6", hatFinanzen: true },
+  { name: "Putzen & Vorbereitung", farbe: "#14b8a6", hatVorlage: true },
 ] as const;
