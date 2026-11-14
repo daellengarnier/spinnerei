@@ -5,6 +5,7 @@ import { anlaesse, ressorts, todos } from "@/lib/db/schema";
 import { allUsers, notifyMany } from "@/lib/notify";
 import { formatDatumKurz } from "@/lib/datum";
 import { STANDARD_RESSORTS } from "@/lib/standardRessorts";
+import { checklisteAusVorlage } from "@/lib/checkliste";
 
 // Alle Anlässe, chronologisch, mit Anzahl offener Todos.
 export async function GET() {
@@ -26,7 +27,7 @@ export async function GET() {
   return Response.json({ anlaesse: result });
 }
 
-// Admin: neuen Anlass anlegen, mit den Standard-Ressorts.
+// Admin: neuen Anlass anlegen, mit den Standard-Ressorts und der Standard-Checkliste.
 export async function POST(request: Request) {
   const auth = await requireAdmin();
   if (isResponse(auth)) return auth;
@@ -66,6 +67,8 @@ export async function POST(request: Request) {
       hatFinanzen: "hatFinanzen" in r && r.hatFinanzen,
     })),
   );
+
+  await checklisteAusVorlage(inserted[0].id);
 
   // Alle Mitglieder benachrichtigen (Inbox + Push).
   const alle = await allUsers();

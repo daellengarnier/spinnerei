@@ -260,6 +260,20 @@
       "when": 1793491688252,
       "tag": "0036_beleg-drive",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794615675632,
+      "tag": "0037_checkliste",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794615690008,
+      "tag": "0038_checkliste-vorlage",
+      "breakpoints": true
     }
   ]
 }

@@ -442,6 +442,44 @@ export const todoAssignees = pgTable(
   (t) => [primaryKey({ columns: [t.todoId, t.userId] })],
 );
 
+// Standard-Checkliste für Anlässe (Vorbereitung und Nachbereitung im Haus).
+// Die Vorlage pflegen Admins; jeder Anlass bekommt eine eigene Kopie
+// (checkliste_punkte), damit spätere Änderungen alte Anlässe nicht verändern.
+export type ChecklistePhase = "vorbereitung" | "nachbereitung";
+
+export const checklisteVorlage = pgTable("checkliste_vorlage", {
+  id: serial("id").primaryKey(),
+  phase: text("phase").$type<ChecklistePhase>().notNull(),
+  gruppe: text("gruppe").notNull(),
+  titel: text("titel").notNull(),
+  beschreibung: text("beschreibung").notNull().default(""),
+  reihenfolge: integer("reihenfolge").notNull().default(0),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const checklistePunkte = pgTable(
+  "checkliste_punkte",
+  {
+    id: serial("id").primaryKey(),
+    anlassId: integer("anlassId")
+      .notNull()
+      .references(() => anlaesse.id, { onDelete: "cascade" }),
+    phase: text("phase").$type<ChecklistePhase>().notNull(),
+    gruppe: text("gruppe").notNull(),
+    titel: text("titel").notNull(),
+    beschreibung: text("beschreibung").notNull().default(""),
+    reihenfolge: integer("reihenfolge").notNull().default(0),
+    // Wer hat abgehakt und wann (null = offen).
+    erledigtVon: integer("erledigtVon").references(() => users.id, { onDelete: "set null" }),
+    erledigtAm: timestamp("erledigtAm", { withTimezone: true }),
+    // null = aus der Vorlage übernommen, sonst wer den Punkt ergänzt hat.
+    erstelltVon: integer("erstelltVon").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("checkliste_punkte_anlass_idx").on(t.anlassId)],
+);
+
 export const comments = pgTable(
   "comments",
   {

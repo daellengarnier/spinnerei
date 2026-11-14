@@ -6,6 +6,7 @@ import { api } from "@/lib/apiClient";
 import { Avatar, Modal, Spinner } from "@/components/Ui";
 import type { Rolle } from "@/lib/uiTypes";
 import { Icon } from "@/components/Icon";
+import { Checkliste } from "@/components/Checkliste";
 
 interface AdminUser {
   id: number;
@@ -29,7 +30,7 @@ const COLORS = ["#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", "#22c55e"
 
 export default function AdminPage() {
   // Rückkehr vom Drive-Verbinden (?drive=…) öffnet direkt den Belege-Tab.
-  const [tab, setTab] = useState<"users" | "ressorts" | "belege">(() =>
+  const [tab, setTab] = useState<"users" | "ressorts" | "checkliste" | "belege">(() =>
     typeof window !== "undefined" && new URLSearchParams(window.location.search).has("drive") ? "belege" : "users",
   );
   return (
@@ -47,11 +48,14 @@ export default function AdminPage() {
         <button className={`flex-1  py-2 ${tab === "ressorts" ? "bg-surface shadow-sm" : "text-dim"}`} onClick={() => setTab("ressorts")}>
           Ressorts
         </button>
+        <button className={`flex-1  py-2 ${tab === "checkliste" ? "bg-surface shadow-sm" : "text-dim"}`} onClick={() => setTab("checkliste")}>
+          Checkliste
+        </button>
         <button className={`flex-1  py-2 ${tab === "belege" ? "bg-surface shadow-sm" : "text-dim"}`} onClick={() => setTab("belege")}>
           Belege & Sicherung
         </button>
       </div>
-      {tab === "users" ? <UsersAdmin /> : tab === "ressorts" ? <RessortsAdmin /> : <BelegeAdmin />}
+      {tab === "users" ? <UsersAdmin /> : tab === "ressorts" ? <RessortsAdmin /> : tab === "checkliste" ? <Checkliste modus="vorlage" /> : <BelegeAdmin />}
     </div>
   );
 }

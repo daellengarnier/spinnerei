@@ -8,6 +8,7 @@ import { Avatar, EmptyState, Modal, Spinner } from "@/components/Ui";
 import { Icon } from "@/components/Icon";
 import { ressortIcon } from "@/lib/ressortIcon";
 import { AnlassTodos, AnlassTodoModal } from "@/components/AnlassTodos";
+import { Checkliste } from "@/components/Checkliste";
 import { CommentThread } from "@/components/CommentThread";
 import { Acts } from "@/components/Acts";
 import { Finanzen } from "@/components/Finanzen";
@@ -60,16 +61,17 @@ interface AnlassAct {
   essgewohnheiten: string; // Allergien
 }
 
-type TabKey = "uebersicht" | "todos" | "chat" | "acts" | "geld";
+type TabKey = "uebersicht" | "todos" | "checkliste" | "chat" | "acts" | "geld";
 const TABS: { key: TabKey; label: string }[] = [
   { key: "uebersicht", label: "Übersicht" },
   { key: "todos", label: "Todos" },
+  { key: "checkliste", label: "Checkliste" },
   { key: "chat", label: "Chat" },
   { key: "acts", label: "Acts" },
   { key: "geld", label: "Geld" },
 ];
 
-// Ein Anlass = Übersicht · Todos · Chat · Acts · Geld. Die bisherigen Ressorts
+// Ein Anlass = Übersicht · Todos · Checkliste · Chat · Acts · Geld. Die bisherigen Ressorts
 // bleiben als «Bereiche» bestehen (Etiketten an Todos, eigene Seiten erreichbar
 // über die Übersicht) — es wird nichts verschoben oder gelöscht.
 export default function AnlassDashboard() {
@@ -182,6 +184,8 @@ export default function AnlassDashboard() {
       )}
 
       {tab === "todos" && <AnlassTodos anlassId={anlassId} onNeu={() => setTodoEntwurf("")} />}
+
+      {tab === "checkliste" && <Checkliste modus="anlass" anlassId={anlassId} />}
 
       {tab === "chat" && (
         <div className="card p-4">
