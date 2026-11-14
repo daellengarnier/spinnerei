@@ -75,7 +75,23 @@ export function Checkliste(props: Props) {
   );
   useEffect(() => {
     load();
-  }, [load]);
+    if (!istAnlass) return;
+    // Was andere einschreiben oder abhaken, erscheint ohne Neuladen: alle 10 s
+    // nachfragen, solange die Seite sichtbar ist, und sofort beim Zurückkehren.
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") load();
+    }, 10000);
+    const sichtbar = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", sichtbar);
+    window.addEventListener("focus", sichtbar);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", sichtbar);
+      window.removeEventListener("focus", sichtbar);
+    };
+  }, [load, istAnlass]);
 
   const fehler = (e: unknown) => {
     setError((e as Error).message);
