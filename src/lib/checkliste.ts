@@ -1,6 +1,7 @@
 // Standard-Checkliste der Anlässe (Vorbereitung und Nachbereitung im Haus).
 import "server-only";
 import { and, asc, eq, max } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { getDb } from "@/lib/db/client";
 import { checklistePunkte, checklisteVorlage, users } from "@/lib/db/schema";
 import type { ChecklistePhase } from "@/lib/db/schema";
@@ -31,6 +32,7 @@ export async function checklisteAusVorlage(anlassId: number, erstelltVon: number
 }
 
 export async function checklisteVonAnlass(anlassId: number) {
+  const uebernehmer = alias(users, "uebernehmer");
   return getDb()
     .select({
       id: checklistePunkte.id,
@@ -42,9 +44,12 @@ export async function checklisteVonAnlass(anlassId: number) {
       erledigtVon: checklistePunkte.erledigtVon,
       erledigtVonName: users.name,
       erledigtAm: checklistePunkte.erledigtAm,
+      uebernommenVon: checklistePunkte.uebernommenVon,
+      uebernommenVonName: uebernehmer.name,
     })
     .from(checklistePunkte)
     .leftJoin(users, eq(users.id, checklistePunkte.erledigtVon))
+    .leftJoin(uebernehmer, eq(uebernehmer.id, checklistePunkte.uebernommenVon))
     .where(eq(checklistePunkte.anlassId, anlassId))
     .orderBy(asc(checklistePunkte.reihenfolge), asc(checklistePunkte.id));
 }

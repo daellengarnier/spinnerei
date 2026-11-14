@@ -3,7 +3,8 @@ import { requireUser, isResponse } from "@/lib/auth";
 import { getDb } from "@/lib/db/client";
 import { checklistePunkte } from "@/lib/db/schema";
 
-// Punkt abhaken ({ erledigt }) oder Titel/Beschreibung ändern.
+// Punkt abhaken ({ erledigt }), sich einschreiben ({ uebernehmen }) oder
+// Titel/Beschreibung ändern.
 // Abhaken speichert, wer es war und wann.
 export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const auth = await requireUser();
@@ -14,6 +15,9 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   if (typeof body?.erledigt === "boolean") {
     patch.erledigtVon = body.erledigt ? auth.id : null;
     patch.erledigtAm = body.erledigt ? new Date() : null;
+  }
+  if (typeof body?.uebernehmen === "boolean") {
+    patch.uebernommenVon = body.uebernehmen ? auth.id : null;
   }
   if (body?.titel !== undefined) {
     const titel = String(body.titel).trim();

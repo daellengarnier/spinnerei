@@ -473,6 +473,8 @@ export const checklistePunkte = pgTable(
     // Wer hat abgehakt und wann (null = offen).
     erledigtVon: integer("erledigtVon").references(() => users.id, { onDelete: "set null" }),
     erledigtAm: timestamp("erledigtAm", { withTimezone: true }),
+    // Wer hat sich eingeschrieben («ich mach's»), noch bevor es erledigt ist.
+    uebernommenVon: integer("uebernommenVon").references(() => users.id, { onDelete: "set null" }),
     // null = aus der Vorlage übernommen, sonst wer den Punkt ergänzt hat.
     erstelltVon: integer("erstelltVon").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),

@@ -1,13 +1,14 @@
 "use client";
 
 // Standard-Checkliste: Vorbereitung und Nachbereitung im Haus.
-// Modus «anlass»: Punkte abhaken (mit Name und Zeit), Beschreibung aufklappen,
-// eigene Punkte ergänzen. Modus «vorlage» (Admin): die Vorlage bearbeiten, die
+// Modus «anlass»: sich für Punkte einschreiben («Ich mach's»), abhaken (mit
+// Name und Zeit), Beschreibung aufklappen, eigene Punkte ergänzen. Modus «vorlage» (Admin): die Vorlage bearbeiten, die
 // neue Anlässe bekommen.
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/apiClient";
 import { EmptyState, Spinner } from "./Ui";
+import { useAuth } from "./AuthContext";
 import { Icon } from "./Icon";
 
 type Phase = "vorbereitung" | "nachbereitung";
@@ -22,6 +23,8 @@ interface Punkt {
   erledigtVon?: number | null;
   erledigtVonName?: string | null;
   erledigtAm?: string | null;
+  uebernommenVon?: number | null;
+  uebernommenVonName?: string | null;
 }
 
 const PHASEN: { key: Phase; label: string }[] = [
@@ -56,6 +59,7 @@ export function Checkliste(props: Props) {
   const listUrl = istAnlass ? `/anlaesse/${anlassId}/checkliste` : "/checkliste/vorlage";
   const punktUrl = (id: number) => (istAnlass ? `/checkliste/punkte/${id}` : `/checkliste/vorlage/${id}`);
 
+  const { user } = useAuth();
   const [punkte, setPunkte] = useState<Punkt[] | null>(null);
   const [offen, setOffen] = useState<Set<number>>(new Set());
   const [error, setError] = useState("");
@@ -84,6 +88,15 @@ export function Checkliste(props: Props) {
     try {
       await api.patch(punktUrl(p.id), { erledigt });
       load();
+    } catch (e) {
+      fehler(e);
+    }
+  };
+
+  const uebernehmen = async (p: Punkt, ja: boolean) => {
+    setPunkte((l) => l?.map((x) => (x.id === p.id ? { ...x, uebernommenVon: ja ? (user?.id ?? null) : null, uebernommenVonName: ja ? (user?.name ?? null) : null } : x)) ?? null);
+    try {
+      await api.patch(punktUrl(p.id), { uebernehmen: ja });
     } catch (e) {
       fehler(e);
     }
@@ -193,6 +206,8 @@ export function Checkliste(props: Props) {
                       key={p.id}
                       punkt={p}
                       abhakbar={istAnlass}
+                      meineId={user?.id ?? null}
+                      onUebernehmen={(ja) => uebernehmen(p, ja)}
                       aufgeklappt={offen.has(p.id)}
                       onAufklappen={() => umschalten(p.id)}
                       onToggle={() => toggle(p)}
@@ -215,6 +230,8 @@ export function Checkliste(props: Props) {
 function PunktZeile({
   punkt,
   abhakbar,
+  meineId,
+  onUebernehmen,
   aufgeklappt,
   onAufklappen,
   onToggle,
@@ -223,6 +240,8 @@ function PunktZeile({
 }: {
   punkt: Punkt;
   abhakbar: boolean;
+  meineId: number | null;
+  onUebernehmen: (ja: boolean) => void;
   aufgeklappt: boolean;
   onAufklappen: () => void;
   onToggle: () => void;
@@ -230,6 +249,8 @@ function PunktZeile({
   onEntfernen: () => void;
 }) {
   const done = !!punkt.erledigtAm;
+  const vergeben = !!punkt.uebernommenVon;
+  const meins = vergeben && punkt.uebernommenVon === meineId;
   const [bearbeiten, setBearbeiten] = useState(false);
   const [titel, setTitel] = useState(punkt.titel);
   const [beschreibung, setBeschreibung] = useState(punkt.beschreibung);
@@ -252,14 +273,24 @@ function PunktZeile({
             <Icon name="check" size={13} strokeWidth={2.4} />
           </button>
         )}
-        <button className="flex min-w-0 flex-1 items-start justify-between gap-2 text-left" onClick={onAufklappen} aria-expanded={aufgeklappt}>
-          <span className="min-w-0">
-            <span className={`block text-sm font-medium ${done ? "text-dim line-through" : "text-ink"}`}>{punkt.titel}</span>
-            {done && <span className="mt-0.5 block text-xs text-dim">erledigt von {erledigtText(punkt)}</span>}
-          </span>
-          <span className={`mt-0.5 shrink-0 text-dim transition-transform ${aufgeklappt ? "rotate-90" : ""}`}>
-            <Icon name="chevron" size={14} />
-          </span>
+        <button className="min-w-0 flex-1 text-left" onClick={onAufklappen} aria-expanded={aufgeklappt}>
+          <span className={`block text-sm font-medium ${done ? "text-dim line-through" : "text-ink"}`}>{punkt.titel}</span>
+          {done && <span className="mt-0.5 block text-xs text-dim">erledigt von {erledigtText(punkt)}</span>}
+          {!done && vergeben && (
+            <span className="mt-0.5 block text-xs text-accent">{meins ? "Du machst das" : `${punkt.uebernommenVonName ?? "Jemand"} macht das`}</span>
+          )}
+        </button>
+        {abhakbar && !done && (!vergeben || meins) && (
+          <button onClick={() => onUebernehmen(!meins)} className="mt-0.5 shrink-0 whitespace-nowrap border border-line2 px-2 py-0.5 text-xs text-dim">
+            {meins ? "Abgeben" : "Ich mach's"}
+          </button>
+        )}
+        <button
+          className={`mt-1 shrink-0 text-dim transition-transform ${aufgeklappt ? "rotate-90" : ""}`}
+          onClick={onAufklappen}
+          aria-label={aufgeklappt ? "Zuklappen" : "Aufklappen"}
+        >
+          <Icon name="chevron" size={14} />
         </button>
       </div>
 
@@ -298,7 +329,12 @@ function PunktZeile({
               ) : (
                 <p className="text-sm italic text-dim">Noch keine Beschreibung.</p>
               )}
-              <div className="flex gap-3 text-xs">
+              <div className="flex flex-wrap gap-3 text-xs">
+                {abhakbar && !done && vergeben && !meins && (
+                  <button className="inline-flex items-center gap-1 text-accent" onClick={() => onUebernehmen(true)}>
+                    <Icon name="user" size={12} /> Selbst übernehmen
+                  </button>
+                )}
                 <button className="inline-flex items-center gap-1 text-dim" onClick={startBearbeiten}>
                   <Icon name="pencil" size={12} /> Bearbeiten
                 </button>

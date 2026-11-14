@@ -1,0 +1,2 @@
+ALTER TABLE "checkliste_punkte" ADD COLUMN "uebernommenVon" integer;--> statement-breakpoint
+ALTER TABLE "checkliste_punkte" ADD CONSTRAINT "checkliste_punkte_uebernommenVon_users_id_fk" FOREIGN KEY ("uebernommenVon") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
